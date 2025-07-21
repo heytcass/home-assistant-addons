@@ -1,6 +1,6 @@
 name: "Claude Terminal"
 description: "Terminal interface for Anthropic's Claude Code CLI"
-version: "1.0.2"
+version: "1.1.0-dev"
 slug: "claude_terminal"
 init: false
 
@@ -27,8 +27,12 @@ ports_description:
   7681/tcp: "Web terminal (not required for ingress)"
 
 # Add-on configuration options
-options: {}
-schema: {}
+options:
+  auto_launch_claude:
+    name: "Auto-launch Claude"
+    description: "Automatically start Claude on terminal open (disable for interactive session picker)"
+schema:
+  auto_launch_claude: bool?
 
 # Volume mapping for persistent storage
 map:
