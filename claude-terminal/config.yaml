@@ -1,7 +1,7 @@
 ---
 name: "Claude Terminal"
 description: "Terminal interface for Anthropic's Claude Code CLI with persistent auth"
-version: "1.3.0"
+version: "1.3.1"
 slug: "claude_terminal"
 init: false
 
@@ -35,7 +35,9 @@ options:
 schema:
   auto_launch_claude: bool?
 
-# No volume mappings needed - using /data (always available and writable)
+# Volume mappings for file access
+map:
+  - config:rw    # Access to Home Assistant configuration files
 
 # API access for Home Assistant integration
 hassio_api: true

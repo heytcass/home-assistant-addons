@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.3.1
+
+### 🐛 Critical Fix
+- **Restored config directory access**: Fixed regression where add-on couldn't access Home Assistant configuration files
+  - Re-added `config:rw` volume mapping that was accidentally removed in 1.2.0
+  - Users can now properly access and edit their configuration files again
+
 ## 1.3.0
 
 ### ✨ New Features
