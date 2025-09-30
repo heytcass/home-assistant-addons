@@ -1,5 +1,46 @@
 # Changelog
 
+## 1.3.0
+
+### ✨ New Features
+- **Full Home Assistant API Access**: Enabled complete API access for automations and entity control
+  - Added `hassio_api`, `homeassistant_api`, and `auth_api` permissions
+  - Set `hassio_role` to 'manager' for full Supervisor access
+  - Created comprehensive API examples script (`ha-api-examples.sh`)
+  - Includes Supervisor API, Core API, and WebSocket examples
+  - Python and bash code examples for entity control
+
+### 🐛 Bug Fixes
+- **Fixed authentication paste issues** (#14): Added authentication helper for clipboard problems
+  - New authentication helper script with multiple input methods
+  - Manual code entry option when clipboard paste fails
+  - File-based authentication via `/config/auth-code.txt`
+  - Integrated into session picker as menu option
+
+### 🛠️ Improvements
+- **Enhanced diagnostics** (#16): Added comprehensive health check system
+  - System resource monitoring (memory, disk space)
+  - Permission and dependency validation
+  - VirtualBox-specific troubleshooting guidance
+  - Automatic health check on startup
+  - Improved error handling with strict mode
+
+## 1.2.1
+
+### 🔧 Internal Changes
+- Fixed YAML formatting issues for better compatibility
+- Added document start marker and fixed line lengths
+
+## 1.2.0
+
+### 🔒 Authentication Persistence Fix (PR #15)
+- **Fixed OAuth token persistence**: Tokens now survive container restarts
+  - Switched from `/config` to `/data` directory (Home Assistant best practice)
+  - Implemented XDG Base Directory specification compliance
+  - Added automatic migration for existing authentication files
+  - Removed complex symlink/monitoring systems for simplicity
+  - Maintains full backward compatibility
+
 ## 1.1.4
 
 ### 🧹 Maintenance
