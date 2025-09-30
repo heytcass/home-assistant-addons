@@ -1,5 +1,9 @@
 #!/usr/bin/with-contenv bashio
 
+# Enable strict error handling
+set -e
+set -o pipefail
+
 # Initialize environment for Claude Code CLI using /data (HA best practice)
 init_environment() {
     # Use /data exclusively - guaranteed writable by HA Supervisor
@@ -168,10 +172,22 @@ start_web_terminal() {
         bash -c "$launch_command"
 }
 
+# Run health check
+run_health_check() {
+    if [ -f "/opt/scripts/health-check.sh" ]; then
+        bashio::log.info "Running system health check..."
+        chmod +x /opt/scripts/health-check.sh
+        /opt/scripts/health-check.sh || bashio::log.warning "Some health checks failed but continuing..."
+    fi
+}
+
 # Main execution
 main() {
     bashio::log.info "Initializing Claude Terminal add-on..."
-    
+
+    # Run diagnostics first (especially helpful for VirtualBox issues)
+    run_health_check
+
     init_environment
     install_tools
     setup_session_picker

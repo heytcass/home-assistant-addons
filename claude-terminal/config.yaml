@@ -1,5 +1,6 @@
+---
 name: "Claude Terminal"
-description: "Terminal interface for Anthropic's Claude Code CLI with persistent authentication"
+description: "Terminal interface for Anthropic's Claude Code CLI with persistent auth"
 version: "1.2.1"
 slug: "claude_terminal"
 init: false
@@ -30,7 +31,7 @@ ports_description:
 options:
   auto_launch_claude:
     name: "Auto-launch Claude"
-    description: "Automatically start Claude on terminal open (disable for interactive session picker)"
+    description: "Auto-start Claude on terminal open (disable for session picker)"
 schema:
   auto_launch_claude: bool?
 
