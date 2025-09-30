@@ -108,6 +108,12 @@ setup_session_picker() {
     else
         bashio::log.warning "Session picker script not found, using auto-launch mode only"
     fi
+
+    # Setup authentication helper if it exists
+    if [ -f "/opt/scripts/claude-auth-helper.sh" ]; then
+        chmod +x /opt/scripts/claude-auth-helper.sh
+        bashio::log.info "Authentication helper script ready"
+    fi
 }
 
 # Legacy monitoring functions removed - using simplified /data approach

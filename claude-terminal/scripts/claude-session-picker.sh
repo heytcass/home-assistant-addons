@@ -17,17 +17,18 @@ show_menu() {
     echo ""
     echo "  1) 🆕 New interactive session (default)"
     echo "  2) ⏩ Continue most recent conversation (-c)"
-    echo "  3) 📋 Resume from conversation list (-r)" 
+    echo "  3) 📋 Resume from conversation list (-r)"
     echo "  4) ⚙️  Custom Claude command (manual flags)"
-    echo "  5) 🐚 Drop to bash shell"
-    echo "  6) ❌ Exit"
+    echo "  5) 🔐 Authentication helper (if paste doesn't work)"
+    echo "  6) 🐚 Drop to bash shell"
+    echo "  7) ❌ Exit"
     echo ""
 }
 
 get_user_choice() {
     local choice
     # Send prompt to stderr to avoid capturing it with the return value
-    printf "Enter your choice [1-6] (default: 1): " >&2
+    printf "Enter your choice [1-7] (default: 1): " >&2
     read -r choice
     
     # Default to 1 if empty
@@ -76,6 +77,12 @@ launch_claude_custom() {
     fi
 }
 
+launch_auth_helper() {
+    echo "🔐 Starting authentication helper..."
+    sleep 1
+    exec /opt/scripts/claude-auth-helper.sh
+}
+
 launch_bash_shell() {
     echo "🐚 Dropping to bash shell..."
     echo "Tip: Run 'claude' manually when ready"
@@ -109,15 +116,18 @@ main() {
                 launch_claude_custom
                 ;;
             5)
-                launch_bash_shell
+                launch_auth_helper
                 ;;
             6)
+                launch_bash_shell
+                ;;
+            7)
                 exit_session_picker
                 ;;
             *)
                 echo ""
                 echo "❌ Invalid choice: '$choice'"
-                echo "Please select a number between 1-6"
+                echo "Please select a number between 1-7"
                 echo ""
                 printf "Press Enter to continue..." >&2
                 read -r
