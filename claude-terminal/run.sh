@@ -1,31 +1,88 @@
 #!/usr/bin/with-contenv bashio
 
-# Initialize environment for Claude Code CLI
+# Initialize environment for Claude Code CLI using /data (HA best practice)
 init_environment() {
-    # Ensure claude-config directory exists for persistent storage
-    mkdir -p /config/claude-config
-    chmod 755 /config/claude-config
+    # Use /data exclusively - guaranteed writable by HA Supervisor
+    local data_home="/data/home"
+    local config_dir="/data/.config"
+    local cache_dir="/data/.cache"
+    local state_dir="/data/.local/state"
+    local claude_config_dir="/data/.config/claude"
 
-    # Set up Claude Code CLI config directory
-    mkdir -p /root/.config
-    
-    # Remove existing link if it exists and create fresh symlink
-    rm -rf /root/.config/anthropic
-    ln -sf /config/claude-config /root/.config/anthropic
+    bashio::log.info "Initializing Claude Code environment in /data..."
 
-    # Ensure proper permissions on any existing credential files
-    if [ -f "/config/claude-config/session_key" ]; then
-        chmod 600 /config/claude-config/session_key
-    fi
-    if [ -f "/config/claude-config/client.json" ]; then
-        chmod 600 /config/claude-config/client.json
+    # Create all required directories
+    if ! mkdir -p "$data_home" "$config_dir/claude" "$cache_dir" "$state_dir" "/data/.local"; then
+        bashio::log.error "Failed to create directories in /data"
+        exit 1
     fi
 
-    # Set environment variables for Claude Code CLI
-    export ANTHROPIC_CONFIG_DIR="/config/claude-config"
-    export HOME="/root"
+    # Set permissions
+    chmod 755 "$data_home" "$config_dir" "$cache_dir" "$state_dir" "$claude_config_dir"
+
+    # Set XDG and application environment variables
+    export HOME="$data_home"
+    export XDG_CONFIG_HOME="$config_dir"
+    export XDG_CACHE_HOME="$cache_dir"
+    export XDG_STATE_HOME="$state_dir"
+    export XDG_DATA_HOME="/data/.local/share"
     
-    bashio::log.info "Credential directory initialized: /config/claude-config"
+    # Claude-specific environment variables
+    export ANTHROPIC_CONFIG_DIR="$claude_config_dir"
+    export ANTHROPIC_HOME="/data"
+
+    # Migrate any existing authentication files from legacy locations
+    migrate_legacy_auth_files "$claude_config_dir"
+
+    bashio::log.info "Environment initialized:"
+    bashio::log.info "  - Home: $HOME"
+    bashio::log.info "  - Config: $XDG_CONFIG_HOME" 
+    bashio::log.info "  - Claude config: $ANTHROPIC_CONFIG_DIR"
+    bashio::log.info "  - Cache: $XDG_CACHE_HOME"
+}
+
+# One-time migration of existing authentication files
+migrate_legacy_auth_files() {
+    local target_dir="$1"
+    local migrated=false
+
+    bashio::log.info "Checking for existing authentication files to migrate..."
+
+    # Check common legacy locations
+    local legacy_locations=(
+        "/root/.config/anthropic"
+        "/root/.anthropic" 
+        "/config/claude-config"
+        "/tmp/claude-config"
+    )
+
+    for legacy_path in "${legacy_locations[@]}"; do
+        if [ -d "$legacy_path" ] && [ "$(ls -A "$legacy_path" 2>/dev/null)" ]; then
+            bashio::log.info "Migrating auth files from: $legacy_path"
+            
+            # Copy files to new location
+            if cp -r "$legacy_path"/* "$target_dir/" 2>/dev/null; then
+                # Set proper permissions
+                find "$target_dir" -type f -exec chmod 600 {} \;
+                
+                # Create compatibility symlink if this is a standard location
+                if [[ "$legacy_path" == "/root/.config/anthropic" ]] || [[ "$legacy_path" == "/root/.anthropic" ]]; then
+                    rm -rf "$legacy_path"
+                    ln -sf "$target_dir" "$legacy_path"
+                    bashio::log.info "Created compatibility symlink: $legacy_path -> $target_dir"
+                fi
+                
+                migrated=true
+                bashio::log.info "Migration completed from: $legacy_path"
+            else
+                bashio::log.warning "Failed to migrate from: $legacy_path"
+            fi
+        fi
+    done
+
+    if [ "$migrated" = false ]; then
+        bashio::log.info "No existing authentication files found to migrate"
+    fi
 }
 
 # Install required tools
@@ -52,6 +109,8 @@ setup_session_picker() {
         bashio::log.warning "Session picker script not found, using auto-launch mode only"
     fi
 }
+
+# Legacy monitoring functions removed - using simplified /data approach
 
 # Determine Claude launch command based on configuration
 get_claude_launch_command() {

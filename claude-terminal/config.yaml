@@ -1,6 +1,6 @@
 name: "Claude Terminal"
-description: "Terminal interface for Anthropic's Claude Code CLI"
-version: "1.1.4"
+description: "Terminal interface for Anthropic's Claude Code CLI with persistent authentication"
+version: "1.2.0"
 slug: "claude_terminal"
 init: false
 
@@ -34,10 +34,7 @@ options:
 schema:
   auto_launch_claude: bool?
 
-# Volume mapping for persistent storage
-map:
-  - config:rw    # Claude configuration and credentials
-  - addons:rw    # Access to other add-ons for development
+# No volume mappings needed - using /data (always available and writable)
 
 # Service startup configuration
 startup: services
