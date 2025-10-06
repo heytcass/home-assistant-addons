@@ -90,15 +90,39 @@ check_claude_cli() {
 check_network_connectivity() {
     bashio::log.info "=== Network Connectivity Check ==="
 
+    # Check DNS resolution first
+    if host registry.npmjs.org >/dev/null 2>&1 || nslookup registry.npmjs.org >/dev/null 2>&1; then
+        bashio::log.info "DNS resolution working ✓"
+    else
+        bashio::log.error "DNS resolution failing - check network configuration"
+        bashio::log.info "Try setting custom DNS servers (e.g., 8.8.8.8, 1.1.1.1)"
+    fi
+
     # Try to reach npm registry
-    if curl -s --head --connect-timeout 5 https://registry.npmjs.org > /dev/null; then
+    if curl -s --head --connect-timeout 10 --max-time 15 https://registry.npmjs.org > /dev/null; then
         bashio::log.info "Can reach npm registry ✓"
     else
         bashio::log.warning "Cannot reach npm registry - this may affect Claude CLI installation"
+        bashio::log.info "This could be due to:"
+        bashio::log.info "  - Network proxy/firewall blocking access"
+        bashio::log.info "  - DNS resolution issues"
+        bashio::log.info "  - Slow network connection (try increasing timeout)"
+    fi
+
+    # Try to reach GitHub Container Registry
+    if curl -s --head --connect-timeout 10 --max-time 15 https://ghcr.io > /dev/null; then
+        bashio::log.info "Can reach GitHub Container Registry ✓"
+    else
+        bashio::log.error "Cannot reach GitHub Container Registry (ghcr.io)"
+        bashio::log.info "This is likely the cause of installation failures"
+        bashio::log.info "Possible solutions:"
+        bashio::log.info "  1. Check if your network blocks ghcr.io"
+        bashio::log.info "  2. Try using a VPN or different network"
+        bashio::log.info "  3. Check VM network adapter settings"
     fi
 
     # Try to reach Anthropic API
-    if curl -s --head --connect-timeout 5 https://api.anthropic.com > /dev/null; then
+    if curl -s --head --connect-timeout 10 --max-time 15 https://api.anthropic.com > /dev/null; then
         bashio::log.info "Can reach Anthropic API ✓"
     else
         bashio::log.warning "Cannot reach Anthropic API - this may affect Claude functionality"
@@ -129,12 +153,36 @@ run_diagnostics() {
         # Provide VirtualBox-specific advice if relevant
         if [ -f /proc/modules ] && grep -q vboxguest /proc/modules; then
             bashio::log.info ""
-            bashio::log.info "=== VirtualBox Detected ==="
-            bashio::log.info "For VirtualBox installations, ensure:"
-            bashio::log.info "1. VM has at least 2GB RAM allocated"
-            bashio::log.info "2. VM has at least 8GB disk space"
-            bashio::log.info "3. VirtualBox Guest Additions are installed"
-            bashio::log.info "4. Network adapter is properly configured"
+            bashio::log.info "=== VirtualBox Environment Detected ==="
+            bashio::log.warning "VirtualBox users commonly experience network issues"
+            bashio::log.info ""
+            bashio::log.info "Required VM settings:"
+            bashio::log.info "  • Memory: At least 2GB RAM (4GB recommended)"
+            bashio::log.info "  • Storage: At least 8GB disk space"
+            bashio::log.info "  • VirtualBox Guest Additions: MUST be installed"
+            bashio::log.info ""
+            bashio::log.info "Network adapter configuration:"
+            bashio::log.info "  • Recommended: Bridged Adapter mode"
+            bashio::log.info "  • Alternative: NAT with port forwarding"
+            bashio::log.info "  • Ensure 'Cable Connected' is checked"
+            bashio::log.info ""
+            bashio::log.info "If installation fails with network timeout:"
+            bashio::log.info "  1. Try changing VM network adapter to Bridged mode"
+            bashio::log.info "  2. Restart the VM after network changes"
+            bashio::log.info "  3. Check if your host firewall blocks container registries"
+            bashio::log.info "  4. Try installation during off-peak hours (network congestion)"
+            bashio::log.info "  5. Consider using Home Assistant on bare metal or Docker instead"
+        fi
+
+        # Check for Proxmox environment
+        if [ -f /proc/cpuinfo ] && grep -q "QEMU Virtual CPU" /proc/cpuinfo; then
+            bashio::log.info ""
+            bashio::log.info "=== Virtual Environment Detected (Possibly Proxmox) ==="
+            bashio::log.info "If running in Proxmox, ensure:"
+            bashio::log.info "  • VM has sufficient resources (2GB+ RAM)"
+            bashio::log.info "  • Network device uses VirtIO (recommended)"
+            bashio::log.info "  • Firewall rules allow container registry access"
+            bashio::log.info "  • DNS is properly configured in the VM"
         fi
     fi
 

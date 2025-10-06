@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.3.2
+
+### 🐛 Bug Fixes
+- **Improved installation reliability** (#16): Enhanced resilience for network issues during installation
+  - Added retry logic (3 attempts) for npm package installation
+  - Configured npm with longer timeouts for slow/unstable connections
+  - Explicitly set npm registry to avoid DNS resolution issues
+  - Added 10-second delay between retry attempts
+
+### 🛠️ Improvements
+- **Enhanced network diagnostics**: Better troubleshooting for connection issues
+  - Added DNS resolution checks to identify network configuration problems
+  - Check connectivity to GitHub Container Registry (ghcr.io)
+  - Extended connection timeouts for virtualized environments
+  - More detailed error messages with specific solutions
+- **Better virtualization support**: Improved guidance for VirtualBox and Proxmox users
+  - Enhanced VirtualBox detection with detailed configuration requirements
+  - Added Proxmox/QEMU environment detection
+  - Specific network adapter recommendations for VM installations
+  - Clear guidance on minimum resource requirements (2GB RAM, 8GB disk)
+
 ## 1.3.1
 
 ### 🐛 Critical Fix
