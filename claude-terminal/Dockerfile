@@ -1,6 +1,10 @@
 ARG BUILD_FROM
 FROM ${BUILD_FROM}
 
+# Build arguments for Home Assistant CLI
+ARG BUILD_ARCH
+ARG CLI_VERSION=4.38.1
+
 # Install packages in a single layer to minimize image size
 # Add retry logic for npm installation to handle network issues
 RUN apk add --no-cache \
@@ -22,6 +26,11 @@ RUN apk add --no-cache \
         (echo "Attempt $i failed, retrying in 10 seconds..." && sleep 10); \
     done \
     && npm cache clean --force
+
+# Install Home Assistant CLI
+RUN curl -Lso /usr/bin/ha \
+    "https://github.com/home-assistant/cli/releases/download/${CLI_VERSION}/ha_${BUILD_ARCH}" \
+    && chmod a+x /usr/bin/ha
 
 # Create directory for Claude configuration and set working directory
 RUN mkdir -p /config/claude-config
