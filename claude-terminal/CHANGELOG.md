@@ -11,6 +11,13 @@
   - Now uses `apiKeyHelper` for API key (Claude Code CLI standard)
   - Environment variables properly loaded from `env` object
   - Custom API endpoints now work correctly
+- **Fixed wizard settings being deleted on restart**: Preserve wizard-created settings.json
+  - Settings created by wizard are no longer removed on restart
+  - Only manual YAML config overrides wizard settings
+
+### 🎯 Improvements
+- **Version display**: Add-on version now shown in startup logs
+- **Better logging**: Settings preview shown when wizard config is detected
 
 ## 1.5.0
 

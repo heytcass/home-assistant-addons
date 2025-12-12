@@ -120,12 +120,16 @@ setup_custom_settings() {
             return 1
         fi
     else
-        bashio::log.info "No custom settings.json provided (using Claude defaults)"
-        
-        # Remove any existing settings.json if no custom settings provided
+        # Check if settings.json was created by the wizard
         if [ -f "$settings_file" ]; then
-            bashio::log.info "Removing previous custom settings.json"
-            rm -f "$settings_file"
+            bashio::log.info "Using settings.json created by configuration wizard"
+            # Show preview
+            bashio::log.info "Settings preview:"
+            head -n 3 "$settings_file" | while IFS= read -r line; do
+                bashio::log.info "  $line"
+            done
+        else
+            bashio::log.info "No custom settings.json (using Claude defaults)"
         fi
     fi
 }
@@ -244,7 +248,11 @@ run_health_check() {
 
 # Main execution
 main() {
-    bashio::log.info "Initializing Claude Terminal add-on..."
+    local addon_version="1.5.1"
+    bashio::log.info "========================================="
+    bashio::log.info "Claude Terminal Add-on v${addon_version}"
+    bashio::log.info "========================================="
+    bashio::log.info "Initializing..."
 
     # Run diagnostics first (especially helpful for VirtualBox issues)
     run_health_check
