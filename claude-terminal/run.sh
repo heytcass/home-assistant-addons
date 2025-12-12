@@ -38,6 +38,9 @@ init_environment() {
     # Migrate any existing authentication files from legacy locations
     migrate_legacy_auth_files "$claude_config_dir"
 
+    # Setup custom settings.json if provided
+    setup_custom_settings "$claude_config_dir"
+
     bashio::log.info "Environment initialized:"
     bashio::log.info "  - Home: $HOME"
     bashio::log.info "  - Config: $XDG_CONFIG_HOME" 
@@ -86,6 +89,44 @@ migrate_legacy_auth_files() {
 
     if [ "$migrated" = false ]; then
         bashio::log.info "No existing authentication files found to migrate"
+    fi
+}
+
+# Setup custom settings.json if provided in add-on configuration
+setup_custom_settings() {
+    local target_dir="$1"
+    local settings_file="$target_dir/settings.json"
+    
+    # Check if user provided custom settings.json content
+    if bashio::config.has_value 'custom_settings_json'; then
+        local custom_settings
+        custom_settings=$(bashio::config 'custom_settings_json')
+        
+        bashio::log.info "Custom settings.json provided, setting up..."
+        
+        # Write the custom settings to the settings.json file
+        if echo "$custom_settings" | jq '.' > "$settings_file" 2>/dev/null; then
+            chmod 644 "$settings_file"
+            bashio::log.info "Custom settings.json created successfully at: $settings_file"
+            
+            # Log a preview (first 3 lines) for debugging
+            bashio::log.info "Settings preview:"
+            head -n 3 "$settings_file" | while IFS= read -r line; do
+                bashio::log.info "  $line"
+            done
+        else
+            bashio::log.error "Failed to create settings.json - invalid JSON format"
+            bashio::log.error "Please check your custom_settings_json configuration"
+            return 1
+        fi
+    else
+        bashio::log.info "No custom settings.json provided (using Claude defaults)"
+        
+        # Remove any existing settings.json if no custom settings provided
+        if [ -f "$settings_file" ]; then
+            bashio::log.info "Removing previous custom settings.json"
+            rm -f "$settings_file"
+        fi
     fi
 }
 
