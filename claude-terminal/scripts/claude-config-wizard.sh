@@ -3,8 +3,14 @@
 # Claude Configuration Wizard
 # Interactive setup for choosing between default Anthropic or custom providers (Z.ai, etc.)
 
-SETTINGS_FILE="/data/.config/claude/settings.json"
+# Claude CLI looks in ~/.claude/settings.json by default
+SETTINGS_FILE="$HOME/.claude/settings.json"
+SETTINGS_DIR="$HOME/.claude"
 WIZARD_COMPLETED_MARKER="/data/.config/claude/.wizard-completed"
+
+# Ensure settings directory exists
+mkdir -p "$SETTINGS_DIR"
+mkdir -p "$(dirname "$WIZARD_COMPLETED_MARKER")"
 
 show_banner() {
     clear

@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.5.2 (Upcoming)
+
+### 🐛 Critical Bug Fix
+- **Fixed settings.json location**: Now uses `~/.claude/settings.json` (Claude CLI default)
+  - Previous location `/data/.config/claude/settings.json` was not read by Claude CLI
+  - Settings now properly recognized on first launch
+  - Wizard creates settings in correct location
+  - Backward compatible: copies settings between locations
+
 ## 1.5.1
 
 ### 🐛 Bug Fixes

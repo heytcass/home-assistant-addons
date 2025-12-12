@@ -96,19 +96,31 @@ migrate_legacy_auth_files() {
 setup_custom_settings() {
     local target_dir="$1"
     local settings_file="$target_dir/settings.json"
-    
+
+    # Also create settings in HOME/.claude/ (where Claude CLI actually looks)
+    local home_claude_dir="$HOME/.claude"
+    local home_settings_file="$home_claude_dir/settings.json"
+
+    mkdir -p "$home_claude_dir"
+
     # Check if user provided custom settings.json content
     if bashio::config.has_value 'custom_settings_json'; then
         local custom_settings
         custom_settings=$(bashio::config 'custom_settings_json')
-        
+
         bashio::log.info "Custom settings.json provided, setting up..."
-        
-        # Write the custom settings to the settings.json file
+
+        # Write the custom settings to both locations
         if echo "$custom_settings" | jq '.' > "$settings_file" 2>/dev/null; then
             chmod 644 "$settings_file"
-            bashio::log.info "Custom settings.json created successfully at: $settings_file"
-            
+            # Copy to HOME/.claude/ where Claude CLI looks
+            cp "$settings_file" "$home_settings_file"
+            chmod 644 "$home_settings_file"
+
+            bashio::log.info "Custom settings.json created at:"
+            bashio::log.info "  - $settings_file"
+            bashio::log.info "  - $home_settings_file (Claude CLI location)"
+
             # Log a preview (first 3 lines) for debugging
             bashio::log.info "Settings preview:"
             head -n 3 "$settings_file" | while IFS= read -r line; do
@@ -120,12 +132,28 @@ setup_custom_settings() {
             return 1
         fi
     else
-        # Check if settings.json was created by the wizard
+        # Check if settings.json was created by the wizard in either location
         if [ -f "$settings_file" ]; then
             bashio::log.info "Using settings.json created by configuration wizard"
+            # Copy to HOME/.claude/ if not already there
+            if [ ! -f "$home_settings_file" ] || [ "$settings_file" -nt "$home_settings_file" ]; then
+                cp "$settings_file" "$home_settings_file"
+                chmod 644 "$home_settings_file"
+                bashio::log.info "Copied settings to: $home_settings_file"
+            fi
             # Show preview
             bashio::log.info "Settings preview:"
             head -n 3 "$settings_file" | while IFS= read -r line; do
+                bashio::log.info "  $line"
+            done
+        elif [ -f "$home_settings_file" ]; then
+            bashio::log.info "Using settings.json from: $home_settings_file"
+            # Copy to target_dir for consistency
+            cp "$home_settings_file" "$settings_file"
+            chmod 644 "$settings_file"
+            # Show preview
+            bashio::log.info "Settings preview:"
+            head -n 3 "$home_settings_file" | while IFS= read -r line; do
                 bashio::log.info "  $line"
             done
         else
@@ -248,7 +276,7 @@ run_health_check() {
 
 # Main execution
 main() {
-    local addon_version="1.5.1"
+    local addon_version="1.5.2"
     bashio::log.info "========================================="
     bashio::log.info "Claude Terminal Add-on v${addon_version}"
     bashio::log.info "========================================="
