@@ -11,11 +11,16 @@
   - Accessible from session picker menu (option 5)
   - View current configuration and remove custom settings
 - **Enhanced Session Picker**: Added configuration wizard option to menu
+- **Environment Variable Loader**: Automatic loading of custom settings
+  - New `load-claude-env.sh` script loads settings.json environment variables
+  - All Claude launch methods now properly load custom configurations
+  - Visual feedback showing loaded configuration
 
 ### 🎯 Improvements
 - Simplified onboarding experience for new users
 - Reduced configuration errors with interactive prompts
 - Better discoverability of Z.ai and custom provider options
+- Fixed: Custom API endpoints now properly recognized by Claude CLI
 
 ## 1.4.0
 
