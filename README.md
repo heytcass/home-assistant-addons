@@ -16,9 +16,12 @@ To add this repository to your Home Assistant instance:
 
 ### Claude Terminal
 
+![Version](https://img.shields.io/badge/version-1.5.1-blue.svg)
+![Architecture](https://img.shields.io/badge/architecture-amd64%20%7C%20aarch64%20%7C%20armv7-green.svg)
+
 A web-based terminal interface with Claude Code CLI pre-installed. This add-on provides a terminal environment directly in your Home Assistant dashboard, allowing you to use Claude's powerful AI capabilities for coding, automation, and configuration tasks.
 
-**Latest Version: 1.5.0** - Now with interactive configuration wizard!
+**Latest Version: 1.5.1** - Now with interactive configuration wizard and fixed Z.ai support!
 
 Features:
 - 🎯 **Interactive Configuration Wizard** - Easy setup for Anthropic, Z.ai, or custom providers
@@ -35,11 +38,13 @@ Features:
   - Home Assistant automation help
   - Learning resources
 
-**New in v1.5.0:**
+**New in v1.5.1:**
+- Fixed: Wizard settings now persist across restarts
+- Fixed: Z.ai and custom providers properly recognized
 - Interactive wizard for Z.ai and custom model providers
 - Automatic environment variable loading from settings.json
 - Visual feedback for loaded configurations
-- No manual YAML editing required
+- Version display in startup logs
 
 [Documentation](claude-terminal/DOCS.md) | [Wizard Guide](claude-terminal/WIZARD_GUIDE.md) | [Changelog](claude-terminal/CHANGELOG.md)
 

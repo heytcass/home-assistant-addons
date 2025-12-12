@@ -1,5 +1,8 @@
 # Claude Terminal for Home Assistant
 
+![Version](https://img.shields.io/badge/version-1.5.1-blue.svg)
+![Architecture](https://img.shields.io/badge/architecture-amd64%20%7C%20aarch64%20%7C%20armv7-green.svg)
+
 A secure, web-based terminal with Claude Code CLI pre-installed for Home Assistant.
 
 ![Claude Terminal Screenshot](https://github.com/shipdocs/home-assistant-addons/raw/main/claude-terminal/screenshot.png)
