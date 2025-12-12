@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.5.0 (Upcoming)
+
+### ✨ New Features
+- **Interactive Configuration Wizard**: User-friendly setup for model providers
+  - Automatic first-run detection and wizard launch
+  - Choose between Anthropic (default), Z.ai, or custom providers
+  - Guided prompts for API keys and model selection
+  - No manual YAML editing required
+  - Accessible from session picker menu (option 5)
+  - View current configuration and remove custom settings
+- **Enhanced Session Picker**: Added configuration wizard option to menu
+
+### 🎯 Improvements
+- Simplified onboarding experience for new users
+- Reduced configuration errors with interactive prompts
+- Better discoverability of Z.ai and custom provider options
+
 ## 1.4.0
 
 ### ✨ New Features

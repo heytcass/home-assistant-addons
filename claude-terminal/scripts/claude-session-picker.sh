@@ -19,23 +19,24 @@ show_menu() {
     echo "  2) ⏩ Continue most recent conversation (-c)"
     echo "  3) 📋 Resume from conversation list (-r)"
     echo "  4) ⚙️  Custom Claude command (manual flags)"
-    echo "  5) 🔐 Authentication helper (if paste doesn't work)"
-    echo "  6) 🐚 Drop to bash shell"
-    echo "  7) ❌ Exit"
+    echo "  5) 🔧 Configuration wizard (Z.ai, custom providers)"
+    echo "  6) 🔐 Authentication helper (if paste doesn't work)"
+    echo "  7) 🐚 Drop to bash shell"
+    echo "  8) ❌ Exit"
     echo ""
 }
 
 get_user_choice() {
     local choice
     # Send prompt to stderr to avoid capturing it with the return value
-    printf "Enter your choice [1-7] (default: 1): " >&2
+    printf "Enter your choice [1-8] (default: 1): " >&2
     read -r choice
-    
+
     # Default to 1 if empty
     if [ -z "$choice" ]; then
         choice=1
     fi
-    
+
     # Trim whitespace and return only the choice
     choice=$(echo "$choice" | tr -d '[:space:]')
     echo "$choice"
@@ -77,6 +78,12 @@ launch_claude_custom() {
     fi
 }
 
+launch_config_wizard() {
+    echo "🔧 Starting configuration wizard..."
+    sleep 1
+    exec /opt/scripts/claude-config-wizard.sh
+}
+
 launch_auth_helper() {
     echo "🔐 Starting authentication helper..."
     sleep 1
@@ -116,18 +123,21 @@ main() {
                 launch_claude_custom
                 ;;
             5)
-                launch_auth_helper
+                launch_config_wizard
                 ;;
             6)
-                launch_bash_shell
+                launch_auth_helper
                 ;;
             7)
+                launch_bash_shell
+                ;;
+            8)
                 exit_session_picker
                 ;;
             *)
                 echo ""
                 echo "❌ Invalid choice: '$choice'"
-                echo "Please select a number between 1-7"
+                echo "Please select a number between 1-8"
                 echo ""
                 printf "Press Enter to continue..." >&2
                 read -r

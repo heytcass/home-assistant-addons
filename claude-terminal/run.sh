@@ -166,10 +166,29 @@ setup_session_picker() {
 # Determine Claude launch command based on configuration
 get_claude_launch_command() {
     local auto_launch_claude
-    
+    local claude_config_dir="/data/.config/claude"
+
+    # Check if this is first run (no settings and no auth)
+    local is_first_run=false
+    if [ ! -f "$claude_config_dir/settings.json" ] && [ ! -f "$claude_config_dir/.claude.json" ]; then
+        # Check if custom_settings_json is configured in add-on options
+        if ! bashio::config.has_value 'custom_settings_json'; then
+            is_first_run=true
+        fi
+    fi
+
+    # If first run, launch config wizard
+    if [ "$is_first_run" = true ]; then
+        if [ -f /opt/scripts/claude-config-wizard.sh ]; then
+            bashio::log.info "First run detected - launching configuration wizard"
+            echo "clear && /opt/scripts/claude-config-wizard.sh"
+            return
+        fi
+    fi
+
     # Get configuration value, default to true for backward compatibility
     auto_launch_claude=$(bashio::config 'auto_launch_claude' 'true')
-    
+
     if [ "$auto_launch_claude" = "true" ]; then
         # Original behavior: auto-launch Claude directly
         echo "clear && echo 'Welcome to Claude Terminal!' && echo '' && echo 'Starting Claude...' && sleep 1 && node \$(which claude)"

@@ -59,16 +59,34 @@ claude-logout
 
 ## Configuration
 
-The add-on requires minimal configuration. All settings are handled automatically:
+### Interactive Setup Wizard (Recommended)
+
+On first launch, the add-on presents an **interactive configuration wizard** that guides you through setup:
+
+1. **🌐 Anthropic (Default)** - Official Claude API with OAuth authentication
+2. **⚡ Z.ai** - Alternative provider with GLM models
+3. **🔧 Custom Provider** - Manual configuration for other providers
+
+The wizard automatically:
+- Prompts for necessary API keys
+- Configures model endpoints
+- Creates the settings.json file
+- **No manual YAML editing required!**
+
+You can access the wizard anytime from the session picker menu (option 5) or by disabling `auto_launch_claude`.
+
+### Automatic Configuration
+
+The add-on handles all settings automatically:
 
 - **Port**: Web interface runs on port 7681
 - **Authentication**: OAuth with Anthropic (credentials stored securely in `/data/.config/claude/`)
 - **Terminal**: Full bash environment with Claude Code CLI pre-installed
 - **Volumes**: Access to both `/config` (Home Assistant) and `/addons` (for development)
 
-### Optional: Custom Settings for Z.ai or Alternative Models
+### Advanced: Manual YAML Configuration (Optional)
 
-If you want to use Z.ai or other custom model providers, you can configure a custom `settings.json`:
+If you prefer manual configuration or need advanced customization, you can configure a custom `settings.json`:
 
 1. Go to **Settings** → **Add-ons** → **Claude Terminal** → **Configuration** tab
 2. Add your custom settings in YAML format:
