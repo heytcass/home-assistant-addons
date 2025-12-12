@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.4.0
+
+### ✨ New Features
+- **Custom settings.json support**: Enable Z.ai and alternative model provider integration
+  - New `custom_settings_json` configuration option in add-on settings
+  - Settings file automatically created at `/data/.config/claude/settings.json`
+  - Supports environment variables, model configuration, and permissions
+  - JSON validation with helpful error messages
+  - Automatic cleanup when custom settings are removed
+
+### 📝 Documentation
+- **Comprehensive Z.ai integration guide**: Detailed examples for custom model configuration
+  - Z.ai API configuration examples with GLM models
+  - Custom permissions configuration examples
+  - Step-by-step setup instructions
+  - Links to official Claude Code settings documentation
+
 ## 1.3.2
 
 ### 🐛 Bug Fixes

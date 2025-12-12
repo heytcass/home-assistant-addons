@@ -16,9 +16,69 @@ This add-on provides a web-based terminal with Claude Code CLI pre-installed, al
 
 ## Configuration
 
-No configuration is needed! The add-on uses OAuth authentication, so you'll be prompted to log in to your Anthropic account the first time you use it.
+The add-on supports optional configuration for advanced use cases:
 
-Your OAuth credentials are stored in the `/config/claude-config` directory and will persist across add-on updates and restarts, so you won't need to log in again.
+### Basic Configuration
+
+No configuration is needed for basic usage! The add-on uses OAuth authentication, so you'll be prompted to log in to your Anthropic account the first time you use it.
+
+Your OAuth credentials are stored in the `/data/.config/claude` directory and will persist across add-on updates and restarts, so you won't need to log in again.
+
+### Advanced Configuration Options
+
+#### Auto-launch Claude
+- **Option**: `auto_launch_claude`
+- **Type**: boolean (optional)
+- **Default**: `true`
+- **Description**: When enabled, Claude starts automatically when you open the terminal. Disable this to see a session picker instead.
+
+#### Custom Settings.json (for Z.ai and Custom Models)
+- **Option**: `custom_settings_json`
+- **Type**: string (optional, JSON format)
+- **Description**: Allows you to provide a custom `settings.json` configuration for Claude Code CLI. This is useful for integrating with Z.ai or other custom model providers.
+
+**Example configuration for Z.ai integration:**
+
+```yaml
+custom_settings_json: |
+  {
+    "env": {
+      "ANTHROPIC_API_KEY": "your_zai_api_key_here",
+      "ANTHROPIC_BASE_URL": "https://api.z.ai/api/anthropic",
+      "ANTHROPIC_DEFAULT_HAIKU_MODEL": "GLM-4.5-Air",
+      "ANTHROPIC_DEFAULT_SONNET_MODEL": "GLM-4.6",
+      "ANTHROPIC_DEFAULT_OPUS_MODEL": "GLM-4.6"
+    }
+  }
+```
+
+**Example configuration with custom permissions:**
+
+```yaml
+custom_settings_json: |
+  {
+    "env": {
+      "ANTHROPIC_MODEL": "claude-opus-4-20250514"
+    },
+    "permissions": {
+      "allow": ["Bash(npm run lint)", "Read(~/.bashrc)"],
+      "deny": ["Bash(curl:*)", "Read(./secrets/**)"]
+    }
+  }
+```
+
+To configure these options in Home Assistant:
+1. Go to **Settings** → **Add-ons** → **Claude Terminal**
+2. Click the **Configuration** tab
+3. Add your desired configuration in YAML format
+4. Click **Save**
+5. Restart the add-on for changes to take effect
+
+**Important Notes:**
+- The `custom_settings_json` must be valid JSON format
+- The settings file will be created at `/data/.config/claude/settings.json`
+- If you remove the `custom_settings_json` configuration, any existing settings.json will be deleted on next restart
+- For more information on settings.json options, see the [Claude Code settings documentation](https://code.claude.com/docs/en/settings)
 
 ## Usage
 

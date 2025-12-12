@@ -59,12 +59,34 @@ claude-logout
 
 ## Configuration
 
-The add-on requires no configuration. All settings are handled automatically:
+The add-on requires minimal configuration. All settings are handled automatically:
 
 - **Port**: Web interface runs on port 7681
-- **Authentication**: OAuth with Anthropic (credentials stored securely in `/config/claude-config/`)
+- **Authentication**: OAuth with Anthropic (credentials stored securely in `/data/.config/claude/`)
 - **Terminal**: Full bash environment with Claude Code CLI pre-installed
 - **Volumes**: Access to both `/config` (Home Assistant) and `/addons` (for development)
+
+### Optional: Custom Settings for Z.ai or Alternative Models
+
+If you want to use Z.ai or other custom model providers, you can configure a custom `settings.json`:
+
+1. Go to **Settings** → **Add-ons** → **Claude Terminal** → **Configuration** tab
+2. Add your custom settings in YAML format:
+
+```yaml
+custom_settings_json: |
+  {
+    "env": {
+      "ANTHROPIC_API_KEY": "your_zai_api_key_here",
+      "ANTHROPIC_BASE_URL": "https://api.z.ai/api/anthropic",
+      "ANTHROPIC_DEFAULT_SONNET_MODEL": "GLM-4.6"
+    }
+  }
+```
+
+3. Save and restart the add-on
+
+For more configuration options and examples, see the [full documentation](DOCS.md).
 
 ## Troubleshooting
 
@@ -134,7 +156,13 @@ For detailed usage instructions, see the [documentation](DOCS.md).
 
 ## Version History
 
-### v1.0.2 (Current) - Security & Bug Fix Release
+### v1.4.0 (Current) - Custom Settings & Z.ai Support
+- ✨ **NEW**: Custom settings.json configuration support
+- 🎯 Enable Z.ai integration and alternative model providers
+- 📝 Comprehensive documentation for custom model configuration
+- 🔧 Settings file created at `/data/.config/claude/settings.json`
+
+### v1.0.2 - Security & Bug Fix Release
 - 🔒 **CRITICAL**: Fixed dangerous filesystem operations
 - 🐛 Added missing armv7 architecture support
 - 🔧 Pinned NPM packages and improved error handling
