@@ -167,11 +167,12 @@ setup_session_picker() {
 get_claude_launch_command() {
     local auto_launch_claude
     local claude_config_dir="/data/.config/claude"
+    local wizard_completed_marker="$claude_config_dir/.wizard-completed"
 
-    # Check if this is first run (no settings and no auth)
+    # Check if this is first run (wizard never completed)
     local is_first_run=false
-    if [ ! -f "$claude_config_dir/settings.json" ] && [ ! -f "$claude_config_dir/.claude.json" ]; then
-        # Check if custom_settings_json is configured in add-on options
+    if [ ! -f "$wizard_completed_marker" ]; then
+        # Only show wizard if no custom_settings_json is configured
         if ! bashio::config.has_value 'custom_settings_json'; then
             is_first_run=true
         fi

@@ -16,8 +16,8 @@ if [ -f "$SETTINGS_FILE" ]; then
             if [ -n "$key" ] && [ -n "$value" ]; then
                 export "$key=$value"
 
-                # Show key info without exposing full API key
-                if [[ "$key" == *"API_KEY"* ]]; then
+                # Show key info without exposing full values
+                if [[ "$key" == *"API_KEY"* ]] || [[ "$key" == *"KEY"* ]]; then
                     echo "  ✓ $key: ${value:0:8}..."
                 else
                     echo "  ✓ $key: $value"
@@ -28,15 +28,14 @@ if [ -f "$SETTINGS_FILE" ]; then
 
         if [ $env_count -gt 0 ]; then
             echo "✅ Loaded $env_count environment variable(s)"
-            echo ""
         fi
     else
         echo "⚠️  jq not available, skipping settings.json environment loading"
     fi
-else
-    echo "ℹ️  Using default Anthropic configuration"
+    echo ""
 fi
 
 # Start Claude with all environment variables loaded
+# Claude will use apiKeyHelper from settings.json for API key
 exec node "$(which claude)" "$@"
 

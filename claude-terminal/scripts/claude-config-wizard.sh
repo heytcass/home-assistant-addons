@@ -4,6 +4,7 @@
 # Interactive setup for choosing between default Anthropic or custom providers (Z.ai, etc.)
 
 SETTINGS_FILE="/data/.config/claude/settings.json"
+WIZARD_COMPLETED_MARKER="/data/.config/claude/.wizard-completed"
 
 show_banner() {
     clear
@@ -32,14 +33,15 @@ show_provider_menu() {
     echo "     • Custom API endpoint and models"
     echo ""
     echo "  4) ℹ️  Show current configuration"
-    echo "  5) 🗑️  Remove custom settings (reset to default)"
-    echo "  6) ❌ Exit without changes"
+    echo "  5) 🗑️  Remove custom settings (keep wizard status)"
+    echo "  6) 🔄 Reset wizard (show on next restart)"
+    echo "  7) ❌ Exit without changes"
     echo ""
 }
 
 get_user_choice() {
     local choice
-    printf "Enter your choice [1-6]: " >&2
+    printf "Enter your choice [1-7]: " >&2
     read -r choice
     echo "$choice" | tr -d '[:space:]'
 }
@@ -55,18 +57,21 @@ setup_anthropic_default() {
     echo ""
     printf "Continue? [Y/n]: " >&2
     read -r confirm
-    
+
     if [[ "$confirm" =~ ^[Nn] ]]; then
         echo "Cancelled."
         return 1
     fi
-    
+
     # Remove custom settings if they exist
     if [ -f "$SETTINGS_FILE" ]; then
         rm -f "$SETTINGS_FILE"
         echo "✅ Custom settings removed"
     fi
-    
+
+    # Mark wizard as completed
+    touch "$WIZARD_COMPLETED_MARKER"
+
     echo "✅ Configuration complete!"
     echo ""
     echo "Next steps:"
@@ -125,11 +130,11 @@ setup_zai_provider() {
             ;;
     esac
     
-    # Create settings.json
+    # Create settings.json with apiKeyHelper
     cat > "$SETTINGS_FILE" <<EOF
 {
+  "apiKeyHelper": "echo '$api_key'",
   "env": {
-    "ANTHROPIC_API_KEY": "$api_key",
     "ANTHROPIC_BASE_URL": "https://api.z.ai/api/anthropic",
     "ANTHROPIC_DEFAULT_HAIKU_MODEL": "$haiku_model",
     "ANTHROPIC_DEFAULT_SONNET_MODEL": "$sonnet_model",
@@ -139,7 +144,10 @@ setup_zai_provider() {
 EOF
     
     chmod 644 "$SETTINGS_FILE"
-    
+
+    # Mark wizard as completed
+    touch "$WIZARD_COMPLETED_MARKER"
+
     echo ""
     echo "✅ Z.ai configuration saved!"
     echo ""
@@ -169,28 +177,32 @@ setup_custom_provider() {
         return 1
     fi
     
-    # Create settings.json
+    # Create settings.json with apiKeyHelper
     cat > "$SETTINGS_FILE" <<EOF
 {
+  "apiKeyHelper": "echo '$api_key'",
   "env": {
-    "ANTHROPIC_API_KEY": "$api_key",
     "ANTHROPIC_BASE_URL": "$base_url"
 EOF
-    
+
     if [ -n "$model_name" ]; then
         cat >> "$SETTINGS_FILE" <<EOF
 ,
     "ANTHROPIC_DEFAULT_SONNET_MODEL": "$model_name"
 EOF
     fi
-    
+
     cat >> "$SETTINGS_FILE" <<EOF
 
   }
 }
 EOF
-    
+
     chmod 644 "$SETTINGS_FILE"
+
+    # Mark wizard as completed
+    touch "$WIZARD_COMPLETED_MARKER"
+
     echo "✅ Custom configuration saved!"
     return 0
 }
@@ -233,6 +245,7 @@ remove_custom_settings() {
     echo "This will:"
     echo "  • Delete $SETTINGS_FILE"
     echo "  • Revert to Anthropic default configuration"
+    echo "  • Keep wizard completion status (won't show wizard on restart)"
     echo ""
     printf "Are you sure? [y/N]: " >&2
     read -r confirm
@@ -240,6 +253,30 @@ remove_custom_settings() {
     if [[ "$confirm" =~ ^[Yy] ]]; then
         rm -f "$SETTINGS_FILE"
         echo "✅ Custom settings removed. Using Anthropic defaults."
+    else
+        echo "Cancelled."
+    fi
+
+    echo ""
+    printf "Press Enter to continue..." >&2
+    read -r
+}
+
+reset_wizard() {
+    echo ""
+    echo "🔄 Reset Wizard Status"
+    echo ""
+    echo "This will:"
+    echo "  • Remove wizard completion marker"
+    echo "  • Show configuration wizard on next add-on restart"
+    echo "  • Keep current settings.json (if exists)"
+    echo ""
+    printf "Are you sure? [y/N]: " >&2
+    read -r confirm
+
+    if [[ "$confirm" =~ ^[Yy] ]]; then
+        rm -f "$WIZARD_COMPLETED_MARKER"
+        echo "✅ Wizard reset. The configuration wizard will appear on next restart."
     else
         echo "Cancelled."
     fi
@@ -274,21 +311,21 @@ main() {
                 if setup_anthropic_default; then
                     echo "Press Enter to start Claude..."
                     read -r
-                    exec node "$(which claude)"
+                    exec /opt/scripts/load-claude-env.sh
                 fi
                 ;;
             2)
                 if setup_zai_provider; then
                     echo "Press Enter to start Claude..."
                     read -r
-                    exec node "$(which claude)"
+                    exec /opt/scripts/load-claude-env.sh
                 fi
                 ;;
             3)
                 if setup_custom_provider; then
                     echo "Press Enter to start Claude..."
                     read -r
-                    exec node "$(which claude)"
+                    exec /opt/scripts/load-claude-env.sh
                 fi
                 ;;
             4)
@@ -298,13 +335,16 @@ main() {
                 remove_custom_settings
                 ;;
             6)
+                reset_wizard
+                ;;
+            7)
                 echo "👋 Exiting..."
                 exit 0
                 ;;
             *)
                 echo ""
                 echo "❌ Invalid choice: '$choice'"
-                echo "Please select a number between 1-6"
+                echo "Please select a number between 1-7"
                 echo ""
                 printf "Press Enter to continue..." >&2
                 read -r

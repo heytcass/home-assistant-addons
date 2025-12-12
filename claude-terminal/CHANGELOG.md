@@ -1,6 +1,18 @@
 # Changelog
 
-## 1.5.0 (Upcoming)
+## 1.5.1
+
+### 🐛 Bug Fixes
+- **Fixed wizard appearing on every restart**: Added wizard completion marker
+  - Wizard now only appears on true first run
+  - Completion status persists across restarts
+  - New "Reset wizard" option to show wizard again if needed
+- **Fixed Z.ai and custom providers not being recognized**: Corrected settings.json structure
+  - Now uses `apiKeyHelper` for API key (Claude Code CLI standard)
+  - Environment variables properly loaded from `env` object
+  - Custom API endpoints now work correctly
+
+## 1.5.0
 
 ### ✨ New Features
 - **Interactive Configuration Wizard**: User-friendly setup for model providers
