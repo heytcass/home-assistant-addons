@@ -57,14 +57,19 @@ Your chosen configuration and OAuth credentials are stored in the `/data/.config
 ```yaml
 custom_settings_json: |
   {
+    "apiKeyHelper": "echo 'your_zai_api_key_here'",
     "env": {
-      "ANTHROPIC_API_KEY": "your_zai_api_key_here",
       "ANTHROPIC_BASE_URL": "https://api.z.ai/api/anthropic",
       "ANTHROPIC_DEFAULT_HAIKU_MODEL": "GLM-4.5-Air",
       "ANTHROPIC_DEFAULT_SONNET_MODEL": "GLM-4.6",
       "ANTHROPIC_DEFAULT_OPUS_MODEL": "GLM-4.6"
     }
   }
+```
+
+**Note:** The `apiKeyHelper` is a shell command that outputs your API key. For security, you can also use:
+```yaml
+"apiKeyHelper": "cat /config/secrets/zai-api-key"
 ```
 
 **Example configuration with custom permissions:**

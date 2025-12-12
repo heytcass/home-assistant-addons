@@ -94,8 +94,8 @@ If you prefer manual configuration or need advanced customization, you can confi
 ```yaml
 custom_settings_json: |
   {
+    "apiKeyHelper": "echo 'your_zai_api_key_here'",
     "env": {
-      "ANTHROPIC_API_KEY": "your_zai_api_key_here",
       "ANTHROPIC_BASE_URL": "https://api.z.ai/api/anthropic",
       "ANTHROPIC_DEFAULT_SONNET_MODEL": "GLM-4.6"
     }

@@ -58,8 +58,8 @@ You can also access it anytime from the **session picker menu** (option 5).
 **Example settings.json created:**
 ```json
 {
+  "apiKeyHelper": "echo 'your_zai_api_key'",
   "env": {
-    "ANTHROPIC_API_KEY": "your_zai_api_key",
     "ANTHROPIC_BASE_URL": "https://api.z.ai/api/anthropic",
     "ANTHROPIC_DEFAULT_HAIKU_MODEL": "GLM-4.5-Air",
     "ANTHROPIC_DEFAULT_SONNET_MODEL": "GLM-4.6",
@@ -67,6 +67,8 @@ You can also access it anytime from the **session picker menu** (option 5).
   }
 }
 ```
+
+**Note:** The `apiKeyHelper` is a shell command executed by Claude Code CLI to retrieve your API key. This is the standard way Claude Code handles API keys.
 
 ---
 
