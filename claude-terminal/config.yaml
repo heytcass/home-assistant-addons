@@ -29,15 +29,11 @@ ports_description:
 
 # Add-on configuration options
 options:
-  auto_launch_claude:
-    name: "Auto-launch Claude"
-    description: "Auto-start Claude on terminal open (disable for session picker)"
-  custom_settings_json:
-    name: "Custom settings.json"
-    description: "Custom Claude Code settings (JSON format) for Z.ai or other model configurations"
+  auto_launch_claude: true
+  custom_settings_json: ""
 schema:
-  auto_launch_claude: bool?
-  custom_settings_json: str?
+  auto_launch_claude: "bool?"
+  custom_settings_json: "str?"
 
 # Volume mappings for file access
 map:
