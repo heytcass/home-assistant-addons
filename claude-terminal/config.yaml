@@ -12,7 +12,7 @@ arch:
   - armv7
 
 # External resources
-url: "https://github.com/anthropics/claude-code"
+url: "https://github.com/shipdocs/home-assistant-addons"
 
 # Web interface configuration
 ingress: true

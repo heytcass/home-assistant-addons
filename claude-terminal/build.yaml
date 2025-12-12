@@ -6,5 +6,5 @@ build_from:
 labels:
   org.opencontainers.image.title: "Home Assistant Add-on: Claude Terminal"
   org.opencontainers.image.description: "Terminal interface for Anthropic's Claude Code CLI"
-  org.opencontainers.image.source: "https://github.com/anthropics/claude-code"
+  org.opencontainers.image.source: "https://github.com/shipdocs/home-assistant-addons"
   org.opencontainers.image.licenses: "MIT"
