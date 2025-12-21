@@ -9,6 +9,18 @@ RUN apk add --no-cache \
     bash \
     curl \
     nano \
+    python3 \
+    py3-pip \
+    py3-requests \
+    py3-aiohttp \
+    py3-yaml \
+    py3-beautifulsoup4 \
+    git \
+    vim \
+    wget \
+    netcat-openbsd \
+    jq \
+    tree \
     && (npm config set registry https://registry.npmjs.org/ || true) \
     && (npm config set fetch-retries 3 || true) \
     && (npm config set fetch-retry-mintimeout 20000 || true) \
