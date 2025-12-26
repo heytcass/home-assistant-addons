@@ -1,8 +1,11 @@
 # Claude Terminal for Home Assistant
 
+![Version](https://img.shields.io/badge/version-1.5.1-blue.svg)
+![Architecture](https://img.shields.io/badge/architecture-amd64%20%7C%20aarch64%20%7C%20armv7-green.svg)
+
 A secure, web-based terminal with Claude Code CLI pre-installed for Home Assistant.
 
-![Claude Terminal Screenshot](https://github.com/heytcass/home-assistant-addons/raw/main/claude-terminal/screenshot.png)
+![Claude Terminal Screenshot](https://github.com/shipdocs/home-assistant-addons/raw/main/claude-terminal/screenshot.png)
 
 *Claude Terminal running in Home Assistant*
 
@@ -59,12 +62,52 @@ claude-logout
 
 ## Configuration
 
-The add-on requires no configuration. All settings are handled automatically:
+### Interactive Setup Wizard (Recommended)
+
+On first launch, the add-on presents an **interactive configuration wizard** that guides you through setup:
+
+1. **🌐 Anthropic (Default)** - Official Claude API with OAuth authentication
+2. **⚡ Z.ai** - Alternative provider with GLM models
+3. **🔧 Custom Provider** - Manual configuration for other providers
+
+The wizard automatically:
+- Prompts for necessary API keys
+- Configures model endpoints
+- Creates the settings.json file
+- **No manual YAML editing required!**
+
+You can access the wizard anytime from the session picker menu (option 5) or by disabling `auto_launch_claude`.
+
+### Automatic Configuration
+
+The add-on handles all settings automatically:
 
 - **Port**: Web interface runs on port 7681
-- **Authentication**: OAuth with Anthropic (credentials stored securely in `/config/claude-config/`)
+- **Authentication**: OAuth with Anthropic (credentials stored securely in `/data/.config/claude/`)
 - **Terminal**: Full bash environment with Claude Code CLI pre-installed
 - **Volumes**: Access to both `/config` (Home Assistant) and `/addons` (for development)
+
+### Advanced: Manual YAML Configuration (Optional)
+
+If you prefer manual configuration or need advanced customization, you can configure a custom `settings.json`:
+
+1. Go to **Settings** → **Add-ons** → **Claude Terminal** → **Configuration** tab
+2. Add your custom settings in YAML format:
+
+```yaml
+custom_settings_json: |
+  {
+    "apiKeyHelper": "echo 'your_zai_api_key_here'",
+    "env": {
+      "ANTHROPIC_BASE_URL": "https://api.z.ai/api/anthropic",
+      "ANTHROPIC_DEFAULT_SONNET_MODEL": "GLM-4.6"
+    }
+  }
+```
+
+3. Save and restart the add-on
+
+For more configuration options and examples, see the [full documentation](DOCS.md).
 
 ## Troubleshooting
 
@@ -134,7 +177,13 @@ For detailed usage instructions, see the [documentation](DOCS.md).
 
 ## Version History
 
-### v1.0.2 (Current) - Security & Bug Fix Release
+### v1.4.0 (Current) - Custom Settings & Z.ai Support
+- ✨ **NEW**: Custom settings.json configuration support
+- 🎯 Enable Z.ai integration and alternative model providers
+- 📝 Comprehensive documentation for custom model configuration
+- 🔧 Settings file created at `/data/.config/claude/settings.json`
+
+### v1.0.2 - Security & Bug Fix Release
 - 🔒 **CRITICAL**: Fixed dangerous filesystem operations
 - 🐛 Added missing armv7 architecture support
 - 🔧 Pinned NPM packages and improved error handling

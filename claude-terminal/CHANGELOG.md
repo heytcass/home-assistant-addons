@@ -1,5 +1,72 @@
 # Changelog
 
+## 1.5.2 (Upcoming)
+
+### 🐛 Critical Bug Fix
+- **Fixed settings.json location**: Now uses `~/.claude/settings.json` (Claude CLI default)
+  - Previous location `/data/.config/claude/settings.json` was not read by Claude CLI
+  - Settings now properly recognized on first launch
+  - Wizard creates settings in correct location
+  - Backward compatible: copies settings between locations
+
+## 1.5.1
+
+### 🐛 Bug Fixes
+- **Fixed wizard appearing on every restart**: Added wizard completion marker
+  - Wizard now only appears on true first run
+  - Completion status persists across restarts
+  - New "Reset wizard" option to show wizard again if needed
+- **Fixed Z.ai and custom providers not being recognized**: Corrected settings.json structure
+  - Now uses `apiKeyHelper` for API key (Claude Code CLI standard)
+  - Environment variables properly loaded from `env` object
+  - Custom API endpoints now work correctly
+- **Fixed wizard settings being deleted on restart**: Preserve wizard-created settings.json
+  - Settings created by wizard are no longer removed on restart
+  - Only manual YAML config overrides wizard settings
+
+### 🎯 Improvements
+- **Version display**: Add-on version now shown in startup logs
+- **Better logging**: Settings preview shown when wizard config is detected
+
+## 1.5.0
+
+### ✨ New Features
+- **Interactive Configuration Wizard**: User-friendly setup for model providers
+  - Automatic first-run detection and wizard launch
+  - Choose between Anthropic (default), Z.ai, or custom providers
+  - Guided prompts for API keys and model selection
+  - No manual YAML editing required
+  - Accessible from session picker menu (option 5)
+  - View current configuration and remove custom settings
+- **Enhanced Session Picker**: Added configuration wizard option to menu
+- **Environment Variable Loader**: Automatic loading of custom settings
+  - New `load-claude-env.sh` script loads settings.json environment variables
+  - All Claude launch methods now properly load custom configurations
+  - Visual feedback showing loaded configuration
+
+### 🎯 Improvements
+- Simplified onboarding experience for new users
+- Reduced configuration errors with interactive prompts
+- Better discoverability of Z.ai and custom provider options
+- Fixed: Custom API endpoints now properly recognized by Claude CLI
+
+## 1.4.0
+
+### ✨ New Features
+- **Custom settings.json support**: Enable Z.ai and alternative model provider integration
+  - New `custom_settings_json` configuration option in add-on settings
+  - Settings file automatically created at `/data/.config/claude/settings.json`
+  - Supports environment variables, model configuration, and permissions
+  - JSON validation with helpful error messages
+  - Automatic cleanup when custom settings are removed
+
+### 📝 Documentation
+- **Comprehensive Z.ai integration guide**: Detailed examples for custom model configuration
+  - Z.ai API configuration examples with GLM models
+  - Custom permissions configuration examples
+  - Step-by-step setup instructions
+  - Links to official Claude Code settings documentation
+
 ## 1.3.2
 
 ### 🐛 Bug Fixes

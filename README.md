@@ -9,27 +9,44 @@ To add this repository to your Home Assistant instance:
 1. Go to **Settings** → **Add-ons** → **Add-on Store**
 2. Click the three dots menu in the top right corner
 3. Select **Repositories**
-4. Add the URL: `https://github.com/heytcass/home-assistant-addons`
+4. Add the URL: `https://github.com/shipdocs/home-assistant-addons`
 5. Click **Add**
 
 ## Add-ons
 
 ### Claude Terminal
 
+![Version](https://img.shields.io/badge/version-1.5.1-blue.svg)
+![Architecture](https://img.shields.io/badge/architecture-amd64%20%7C%20aarch64%20%7C%20armv7-green.svg)
+
 A web-based terminal interface with Claude Code CLI pre-installed. This add-on provides a terminal environment directly in your Home Assistant dashboard, allowing you to use Claude's powerful AI capabilities for coding, automation, and configuration tasks.
 
+**Latest Version: 1.5.1** - Now with interactive configuration wizard and fixed Z.ai support!
+
 Features:
-- Web terminal access through your Home Assistant UI
-- Pre-installed Claude Code CLI that launches automatically
-- Direct access to your Home Assistant config directory
-- No configuration needed (uses OAuth)
+- 🎯 **Interactive Configuration Wizard** - Easy setup for Anthropic, Z.ai, or custom providers
+- 🌐 **Web Terminal Access** - Browser-based terminal through your Home Assistant UI
+- 🚀 **Auto-Launch** - Claude starts automatically when you open the terminal
+- 🔧 **Multiple Providers** - Support for Anthropic (default), Z.ai, and custom API endpoints
+- 📁 **Direct Config Access** - Terminal starts in your `/config` directory
+- 🔐 **Secure Authentication** - OAuth for Anthropic, API key support for alternatives
+- 🎨 **Session Picker** - Choose between new session, continue, resume, or custom commands
+- 💻 **Multi-Architecture** - Works on amd64, aarch64, and armv7 platforms
 - Access to Claude's complete capabilities including:
   - Code generation and explanation
   - Debugging assistance
   - Home Assistant automation help
   - Learning resources
 
-[Documentation](claude-terminal/DOCS.md)
+**New in v1.5.1:**
+- Fixed: Wizard settings now persist across restarts
+- Fixed: Z.ai and custom providers properly recognized
+- Interactive wizard for Z.ai and custom model providers
+- Automatic environment variable loading from settings.json
+- Visual feedback for loaded configurations
+- Version display in startup logs
+
+[Documentation](claude-terminal/DOCS.md) | [Wizard Guide](claude-terminal/WIZARD_GUIDE.md) | [Changelog](claude-terminal/CHANGELOG.md)
 
 ## Support
 

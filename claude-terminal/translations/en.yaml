@@ -1,0 +1,12 @@
+---
+configuration:
+  auto_launch_claude:
+    name: Auto-launch Claude
+    description: Automatically start Claude when opening the terminal. Disable to see the session picker menu instead.
+  custom_settings_json:
+    name: Custom settings.json (Advanced)
+    description: >-
+      Custom Claude Code settings in JSON format for Z.ai or other model providers.
+      Note: The interactive configuration wizard (recommended) handles this automatically.
+      Only use this for advanced manual configuration.
+

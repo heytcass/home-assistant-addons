@@ -1,0 +1,107 @@
+name: Monitor GitHub Actions Storage
+
+on:
+  schedule:
+    # Run daily at 4 AM UTC
+    - cron: '0 4 * * *'
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  monitor-storage:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read  # Required to read storage usage
+      
+    steps:
+      - name: Monitor storage usage
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Get artifacts information
+            const artifacts = await github.rest.actions.listArtifactsForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100
+            });
+            
+            let totalArtifactSize = 0;
+            let artifactCount = artifacts.data.artifacts.length;
+            
+            for (const artifact of artifacts.data.artifacts) {
+              totalArtifactSize += artifact.size_in_bytes;
+            }
+            
+            const totalArtifactSizeMB = (totalArtifactSize / 1024 / 1024).toFixed(2);
+            
+            console.log(`Artifacts: ${artifactCount} files, ${totalArtifactSizeMB} MB`);
+            
+            // Create storage report
+            const report = {
+              timestamp: new Date().toISOString(),
+              artifacts: {
+                count: artifactCount,
+                totalSize: totalArtifactSizeMB
+              }
+            };
+            
+            // Save report as artifact for reference
+            const fs = require('fs');
+            fs.writeFileSync('storage-report.json', JSON.stringify(report, null, 2));
+            
+            // Check if we have too many artifacts
+            if (artifactCount > 50 || totalArtifactSizeMB > 500) {
+              console.log('⚠️ WARNING: Too many artifacts or large artifact size');
+              
+              // Create an issue for notification
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `⚠️ GitHub Actions Storage Alert`,
+                body: `
+                ## Storage Usage Alert
+                
+                **Artifacts:** ${artifactCount} files (${totalArtifactSizeMB} MB)
+                
+                ### Recommendations:
+                1. Run cleanup-storage workflow manually
+                2. Review artifact retention periods
+                3. Consider removing unnecessary artifacts
+                
+                This alert was generated automatically.
+                `,
+                labels: ['storage', 'alert']
+              });
+            }
+            
+      - name: Upload storage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: storage-report
+          retention-days: 7  # Keep for 7 days for trend analysis
+          path: storage-report.json
+          
+      - name: Create storage summary
+        run: |
+          echo "## 📊 GitHub Actions Storage Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Report generated at: $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f "storage-report.json" ]; then
+            # Extract values from JSON report
+            ARTIFACT_COUNT=$(jq -r '.artifacts.count' storage-report.json)
+            ARTIFACT_SIZE=$(jq -r '.artifacts.totalSize' storage-report.json)
+            
+            echo "### Artifacts" >> $GITHUB_STEP_SUMMARY
+            echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Count | ${ARTIFACT_COUNT} |" >> $GITHUB_STEP_SUMMARY
+            echo "| Total Size | ${ARTIFACT_SIZE} MB |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            # Add warning if we have too many artifacts
+            if [ "${ARTIFACT_COUNT}" -gt 50 ] || (( $(echo "${ARTIFACT_SIZE} > 500" | bc -l) )); then
+              echo "### ⚠️ Warning" >> $GITHUB_STEP_SUMMARY
+              echo "Too many artifacts or large artifact size. Consider running cleanup actions." >> $GITHUB_STEP_SUMMARY
+            fi
+          fi

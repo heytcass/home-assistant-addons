@@ -38,6 +38,9 @@ init_environment() {
     # Migrate any existing authentication files from legacy locations
     migrate_legacy_auth_files "$claude_config_dir"
 
+    # Setup custom settings.json if provided
+    setup_custom_settings "$claude_config_dir"
+
     bashio::log.info "Environment initialized:"
     bashio::log.info "  - Home: $HOME"
     bashio::log.info "  - Config: $XDG_CONFIG_HOME" 
@@ -89,6 +92,76 @@ migrate_legacy_auth_files() {
     fi
 }
 
+# Setup custom settings.json if provided in add-on configuration
+setup_custom_settings() {
+    local target_dir="$1"
+    local settings_file="$target_dir/settings.json"
+
+    # Also create settings in HOME/.claude/ (where Claude CLI actually looks)
+    local home_claude_dir="$HOME/.claude"
+    local home_settings_file="$home_claude_dir/settings.json"
+
+    mkdir -p "$home_claude_dir"
+
+    # Check if user provided custom settings.json content
+    if bashio::config.has_value 'custom_settings_json'; then
+        local custom_settings
+        custom_settings=$(bashio::config 'custom_settings_json')
+
+        bashio::log.info "Custom settings.json provided, setting up..."
+
+        # Write the custom settings to both locations
+        if echo "$custom_settings" | jq '.' > "$settings_file" 2>/dev/null; then
+            chmod 644 "$settings_file"
+            # Copy to HOME/.claude/ where Claude CLI looks
+            cp "$settings_file" "$home_settings_file"
+            chmod 644 "$home_settings_file"
+
+            bashio::log.info "Custom settings.json created at:"
+            bashio::log.info "  - $settings_file"
+            bashio::log.info "  - $home_settings_file (Claude CLI location)"
+
+            # Log a preview (first 3 lines) for debugging
+            bashio::log.info "Settings preview:"
+            head -n 3 "$settings_file" | while IFS= read -r line; do
+                bashio::log.info "  $line"
+            done
+        else
+            bashio::log.error "Failed to create settings.json - invalid JSON format"
+            bashio::log.error "Please check your custom_settings_json configuration"
+            return 1
+        fi
+    else
+        # Check if settings.json was created by the wizard in either location
+        if [ -f "$settings_file" ]; then
+            bashio::log.info "Using settings.json created by configuration wizard"
+            # Copy to HOME/.claude/ if not already there
+            if [ ! -f "$home_settings_file" ] || [ "$settings_file" -nt "$home_settings_file" ]; then
+                cp "$settings_file" "$home_settings_file"
+                chmod 644 "$home_settings_file"
+                bashio::log.info "Copied settings to: $home_settings_file"
+            fi
+            # Show preview
+            bashio::log.info "Settings preview:"
+            head -n 3 "$settings_file" | while IFS= read -r line; do
+                bashio::log.info "  $line"
+            done
+        elif [ -f "$home_settings_file" ]; then
+            bashio::log.info "Using settings.json from: $home_settings_file"
+            # Copy to target_dir for consistency
+            cp "$home_settings_file" "$settings_file"
+            chmod 644 "$settings_file"
+            # Show preview
+            bashio::log.info "Settings preview:"
+            head -n 3 "$home_settings_file" | while IFS= read -r line; do
+                bashio::log.info "  $line"
+            done
+        else
+            bashio::log.info "No custom settings.json (using Claude defaults)"
+        fi
+    fi
+}
+
 # Install required tools
 install_tools() {
     bashio::log.info "Installing additional tools..."
@@ -125,13 +198,33 @@ setup_session_picker() {
 # Determine Claude launch command based on configuration
 get_claude_launch_command() {
     local auto_launch_claude
-    
+    local claude_config_dir="/data/.config/claude"
+    local wizard_completed_marker="$claude_config_dir/.wizard-completed"
+
+    # Check if this is first run (wizard never completed)
+    local is_first_run=false
+    if [ ! -f "$wizard_completed_marker" ]; then
+        # Only show wizard if no custom_settings_json is configured
+        if ! bashio::config.has_value 'custom_settings_json'; then
+            is_first_run=true
+        fi
+    fi
+
+    # If first run, launch config wizard
+    if [ "$is_first_run" = true ]; then
+        if [ -f /opt/scripts/claude-config-wizard.sh ]; then
+            bashio::log.info "First run detected - launching configuration wizard"
+            echo "clear && /opt/scripts/claude-config-wizard.sh"
+            return
+        fi
+    fi
+
     # Get configuration value, default to true for backward compatibility
     auto_launch_claude=$(bashio::config 'auto_launch_claude' 'true')
-    
+
     if [ "$auto_launch_claude" = "true" ]; then
-        # Original behavior: auto-launch Claude directly
-        echo "clear && echo 'Welcome to Claude Terminal!' && echo '' && echo 'Starting Claude...' && sleep 1 && node \$(which claude)"
+        # Original behavior: auto-launch Claude directly with env loading
+        echo "clear && echo 'Welcome to Claude Terminal!' && echo '' && echo 'Starting Claude...' && sleep 1 && /opt/scripts/load-claude-env.sh"
     else
         # New behavior: show interactive session picker
         if [ -f /usr/local/bin/claude-session-picker ]; then
@@ -139,7 +232,7 @@ get_claude_launch_command() {
         else
             # Fallback if session picker is missing
             bashio::log.warning "Session picker not found, falling back to auto-launch"
-            echo "clear && echo 'Welcome to Claude Terminal!' && echo '' && echo 'Starting Claude...' && sleep 1 && node \$(which claude)"
+            echo "clear && echo 'Welcome to Claude Terminal!' && echo '' && echo 'Starting Claude...' && sleep 1 && /opt/scripts/load-claude-env.sh"
         fi
     fi
 }
@@ -183,7 +276,11 @@ run_health_check() {
 
 # Main execution
 main() {
-    bashio::log.info "Initializing Claude Terminal add-on..."
+    local addon_version="1.5.2"
+    bashio::log.info "========================================="
+    bashio::log.info "Claude Terminal Add-on v${addon_version}"
+    bashio::log.info "========================================="
+    bashio::log.info "Initializing..."
 
     # Run diagnostics first (especially helpful for VirtualBox issues)
     run_health_check

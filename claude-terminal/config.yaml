@@ -1,7 +1,7 @@
 ---
 name: "Claude Terminal"
 description: "Terminal interface for Anthropic's Claude Code CLI with persistent auth"
-version: "1.3.2"
+version: "1.5.2"
 slug: "claude_terminal"
 init: false
 
@@ -12,7 +12,7 @@ arch:
   - armv7
 
 # External resources
-url: "https://github.com/anthropics/claude-code"
+url: "https://github.com/shipdocs/home-assistant-addons"
 
 # Web interface configuration
 ingress: true
@@ -29,11 +29,11 @@ ports_description:
 
 # Add-on configuration options
 options:
-  auto_launch_claude:
-    name: "Auto-launch Claude"
-    description: "Auto-start Claude on terminal open (disable for session picker)"
+  auto_launch_claude: true
+  custom_settings_json: ""
 schema:
-  auto_launch_claude: bool?
+  auto_launch_claude: "bool?"
+  custom_settings_json: "str?"
 
 # Volume mappings for file access
 map:
