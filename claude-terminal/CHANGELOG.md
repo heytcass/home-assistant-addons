@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.4.0
+
+### ✨ New Features
+- **Added Python and development tools** (#26): Enhanced container with scripting and automation capabilities
+  - **Python 3.11** with pip and commonly-used libraries (requests, aiohttp, yaml, beautifulsoup4)
+  - **git** for version control
+  - **vim** for advanced text editing
+  - **jq** for JSON processing (essential for API work)
+  - **tree** for directory visualization
+  - **wget** and **netcat** for network operations
+
+### 📦 Notes
+- Image size increased from ~300 MB to ~457 MB (+52%) to accommodate new tools
+
 ## 1.3.2
 
 ### 🐛 Bug Fixes
