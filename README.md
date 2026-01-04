@@ -31,6 +31,12 @@ Features:
 
 [Documentation](claude-terminal/DOCS.md)
 
+## Community Tools
+
+Tools built by the community to enhance Claude Terminal:
+
+- **[ha-ws-client-go](https://github.com/schoolboyqueue/home-assistant-blueprints/tree/main/scripts/ha-ws-client-go)** by [@schoolboyqueue](https://github.com/schoolboyqueue) - Lightweight Go CLI for Home Assistant WebSocket API. Gives Claude direct access to entity states, service calls, automation traces, and real-time monitoring. Single binary, no dependencies.
+
 ## Support
 
 If you have any questions or issues with this add-on, please create an issue in this repository.
