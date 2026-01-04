@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.4.1
+
+### 🐛 Bug Fixes
+- **Actually include Python and development tools** (#30): Fixed Dockerfile to include tools documented in v1.4.0
+  - Resolves #27 (Add git to container)
+  - Resolves #29 (v1.4.0 missing Python and development tools)
+- **Added yq**: YAML processor for Home Assistant configuration files
+
 ## 1.4.0
 
 ### ✨ New Features
