@@ -65,15 +65,26 @@ launch_claude_custom() {
     echo "Available flags: -c (continue), -r (resume), -p (print), --model, etc."
     echo -n "> claude "
     read -r custom_args
-    
+
     if [ -z "$custom_args" ]; then
         echo "No arguments provided. Starting default session..."
         launch_claude_new
     else
+        # Validate input to prevent command injection
+        # Only allow safe characters: alphanumeric, space, dash, underscore, quotes, equals
+        if ! echo "$custom_args" | grep -qE '^[a-zA-Z0-9 _\-="'"'"'\.]+$'; then
+            echo "❌ Error: Invalid characters detected in command."
+            echo "Only alphanumeric characters, spaces, dashes, underscores, quotes, dots, and equals are allowed."
+            echo ""
+            printf "Press Enter to return to menu..." >&2
+            read -r
+            return 1
+        fi
+
         echo "🚀 Running: claude $custom_args"
         sleep 1
-        # Use eval to properly handle quoted arguments
-        eval "exec node \$(which claude) $custom_args"
+        # Safe execution without eval - use word splitting explicitly
+        exec node "$(which claude)" $custom_args
     fi
 }
 
