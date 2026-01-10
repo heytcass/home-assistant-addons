@@ -164,11 +164,16 @@ start_web_terminal() {
     auto_launch_claude=$(bashio::config 'auto_launch_claude' 'true')
     bashio::log.info "Auto-launch Claude: ${auto_launch_claude}"
     
-    # Run ttyd with improved configuration
+    # Run ttyd with keepalive configuration to prevent WebSocket disconnects
+    # See: https://github.com/heytcass/home-assistant-addons/issues/24
     exec ttyd \
         --port "${port}" \
         --interface 0.0.0.0 \
         --writable \
+        --ping-interval 30 \
+        --client-option enableReconnect=true \
+        --client-option reconnect=10 \
+        --client-option reconnectInterval=5 \
         bash -c "$launch_command"
 }
 
