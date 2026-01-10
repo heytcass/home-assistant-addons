@@ -40,10 +40,17 @@ map:
   - config:rw    # Access to Home Assistant configuration files
 
 # API access for Home Assistant integration
+# Reduced to minimum required permissions for security
+# - hassio_api: Access to add-on info and basic supervisor functions
+# - hassio_role: "default" provides read-only access (changed from "manager")
+# - homeassistant_api: Required for the ha-api-examples.sh demonstration script
+# - auth_api: Required for authentication (kept minimal)
+# NOTE: If you need write access to Home Assistant entities, change role to "admin"
+# but be aware this increases security risk
 hassio_api: true
-hassio_role: manager
+hassio_role: default
 homeassistant_api: true
-auth_api: true
+auth_api: false
 
 # Service startup configuration
 startup: services

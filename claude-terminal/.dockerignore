@@ -1,0 +1,39 @@
+# Git files
+.git
+.gitignore
+.github
+
+# Documentation
+*.md
+DOCS.md
+CHANGELOG.md
+README.md
+
+# Development files
+.vscode
+.idea
+*.swp
+*.swo
+
+# Test files
+test/
+tests/
+*.test.sh
+
+# Build artifacts
+build/
+dist/
+
+# Logs
+*.log
+
+# Temporary files
+.tmp/
+.temp/
+/tmp/
+
+# Config files (mounted at runtime)
+config/
+
+# Images that are not needed in the build
+screenshot.png

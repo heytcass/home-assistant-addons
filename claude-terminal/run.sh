@@ -4,6 +4,27 @@
 set -e
 set -o pipefail
 
+# Secure credential directory permissions
+secure_credential_permissions() {
+    local claude_config_dir="$1"
+
+    bashio::log.info "Securing credential directory permissions..."
+
+    # Ensure directory has restrictive permissions (700 = rwx------)
+    chmod 700 "$claude_config_dir" 2>/dev/null || {
+        bashio::log.warning "Could not set directory permissions for $claude_config_dir"
+    }
+
+    # Secure all credential files (600 = rw-------)
+    if [ -d "$claude_config_dir" ]; then
+        find "$claude_config_dir" -type f -exec chmod 600 {} \; 2>/dev/null
+        bashio::log.info "Credential files secured with 600 permissions"
+    fi
+
+    # Remove any world-readable files in parent directories that might leak info
+    find "/data/.config" -maxdepth 1 -type f -perm -004 -exec chmod 600 {} \; 2>/dev/null || true
+}
+
 # Initialize environment for Claude Code CLI using /data (HA best practice)
 init_environment() {
     # Use /data exclusively - guaranteed writable by HA Supervisor
@@ -15,14 +36,15 @@ init_environment() {
 
     bashio::log.info "Initializing Claude Code environment in /data..."
 
-    # Create all required directories
-    if ! mkdir -p "$data_home" "$config_dir/claude" "$cache_dir" "$state_dir" "/data/.local"; then
+    # Create all required directories with secure permissions from the start
+    if ! (umask 077 && mkdir -p "$data_home" "$config_dir/claude" "$cache_dir" "$state_dir" "/data/.local"); then
         bashio::log.error "Failed to create directories in /data"
         exit 1
     fi
 
-    # Set permissions
-    chmod 755 "$data_home" "$config_dir" "$cache_dir" "$state_dir" "$claude_config_dir"
+    # Set restrictive permissions on sensitive directories
+    chmod 700 "$claude_config_dir"
+    chmod 755 "$data_home" "$config_dir" "$cache_dir" "$state_dir"
 
     # Set XDG and application environment variables
     export HOME="$data_home"
@@ -30,7 +52,7 @@ init_environment() {
     export XDG_CACHE_HOME="$cache_dir"
     export XDG_STATE_HOME="$state_dir"
     export XDG_DATA_HOME="/data/.local/share"
-    
+
     # Claude-specific environment variables
     export ANTHROPIC_CONFIG_DIR="$claude_config_dir"
     export ANTHROPIC_HOME="/data"
@@ -38,10 +60,13 @@ init_environment() {
     # Migrate any existing authentication files from legacy locations
     migrate_legacy_auth_files "$claude_config_dir"
 
-    bashio::log.info "Environment initialized:"
+    # Apply additional security measures to credential storage
+    secure_credential_permissions "$claude_config_dir"
+
+    bashio::log.info "Environment initialized with enhanced security:"
     bashio::log.info "  - Home: $HOME"
-    bashio::log.info "  - Config: $XDG_CONFIG_HOME" 
-    bashio::log.info "  - Claude config: $ANTHROPIC_CONFIG_DIR"
+    bashio::log.info "  - Config: $XDG_CONFIG_HOME"
+    bashio::log.info "  - Claude config: $ANTHROPIC_CONFIG_DIR (secured)"
     bashio::log.info "  - Cache: $XDG_CACHE_HOME"
 }
 
@@ -55,27 +80,38 @@ migrate_legacy_auth_files() {
     # Check common legacy locations
     local legacy_locations=(
         "/root/.config/anthropic"
-        "/root/.anthropic" 
+        "/root/.anthropic"
         "/config/claude-config"
         "/tmp/claude-config"
     )
 
     for legacy_path in "${legacy_locations[@]}"; do
+        # Security check: Skip if path is a symlink to prevent symlink attacks
+        if [ -L "$legacy_path" ]; then
+            bashio::log.warning "Skipping $legacy_path: symlink detected (security measure)"
+            continue
+        fi
+
         if [ -d "$legacy_path" ] && [ "$(ls -A "$legacy_path" 2>/dev/null)" ]; then
             bashio::log.info "Migrating auth files from: $legacy_path"
-            
-            # Copy files to new location
-            if cp -r "$legacy_path"/* "$target_dir/" 2>/dev/null; then
-                # Set proper permissions
+
+            # Copy files to new location, excluding symlinks
+            if find "$legacy_path" -maxdepth 1 -type f -exec cp {} "$target_dir/" \; 2>/dev/null; then
+                # Set secure permissions: owner read/write only
                 find "$target_dir" -type f -exec chmod 600 {} \;
-                
+                find "$target_dir" -type d -exec chmod 700 {} \;
+
                 # Create compatibility symlink if this is a standard location
+                # Security: Only create symlink if path doesn't exist or is not critical
                 if [[ "$legacy_path" == "/root/.config/anthropic" ]] || [[ "$legacy_path" == "/root/.anthropic" ]]; then
-                    rm -rf "$legacy_path"
-                    ln -sf "$target_dir" "$legacy_path"
-                    bashio::log.info "Created compatibility symlink: $legacy_path -> $target_dir"
+                    # Double-check path is safe before removal
+                    if [ -d "$legacy_path" ] && [ ! -L "$legacy_path" ]; then
+                        rm -rf "$legacy_path"
+                        ln -sf "$target_dir" "$legacy_path"
+                        bashio::log.info "Created compatibility symlink: $legacy_path -> $target_dir"
+                    fi
                 fi
-                
+
                 migrated=true
                 bashio::log.info "Migration completed from: $legacy_path"
             else
