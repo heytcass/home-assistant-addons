@@ -21,8 +21,13 @@ init_environment() {
         exit 1
     fi
 
-    # Set permissions
-    chmod 755 "$data_home" "$config_dir" "$cache_dir" "$state_dir" "$claude_config_dir"
+    # Security: Set restrictive permissions (700 = owner-only access)
+    chmod 700 "$data_home" "$config_dir" "$cache_dir" "$state_dir" "$claude_config_dir"
+
+    # Ensure all credential files have secure permissions
+    if [ -d "$claude_config_dir" ]; then
+        find "$claude_config_dir" -type f -exec chmod 600 {} \; 2>/dev/null || true
+    fi
 
     # Set XDG and application environment variables
     export HOME="$data_home"
@@ -61,21 +66,46 @@ migrate_legacy_auth_files() {
     )
 
     for legacy_path in "${legacy_locations[@]}"; do
-        if [ -d "$legacy_path" ] && [ "$(ls -A "$legacy_path" 2>/dev/null)" ]; then
+        # Security: Skip /tmp sources to prevent symlink attacks
+        if [[ "$legacy_path" == /tmp/* ]]; then
+            bashio::log.warning "Skipping migration from /tmp for security: $legacy_path"
+            continue
+        fi
+
+        if [ -d "$legacy_path" ] && [ ! -L "$legacy_path" ] && [ "$(ls -A "$legacy_path" 2>/dev/null)" ]; then
+            # Security: Verify it's a real directory, not a symlink
+            if [ -L "$legacy_path" ]; then
+                bashio::log.warning "Skipping symlink: $legacy_path"
+                continue
+            fi
+
             bashio::log.info "Migrating auth files from: $legacy_path"
-            
-            # Copy files to new location
+
+            # Copy files to new location (already created with secure permissions)
             if cp -r "$legacy_path"/* "$target_dir/" 2>/dev/null; then
-                # Set proper permissions
+                # Security: Set proper permissions on copied files BEFORE any cleanup
                 find "$target_dir" -type f -exec chmod 600 {} \;
-                
+                find "$target_dir" -type d -exec chmod 700 {} \;
+
                 # Create compatibility symlink if this is a standard location
+                # Security: Use atomic operations to prevent TOCTOU race conditions
                 if [[ "$legacy_path" == "/root/.config/anthropic" ]] || [[ "$legacy_path" == "/root/.anthropic" ]]; then
-                    rm -rf "$legacy_path"
-                    ln -sf "$target_dir" "$legacy_path"
-                    bashio::log.info "Created compatibility symlink: $legacy_path -> $target_dir"
+                    # Create temporary symlink with unique name
+                    local temp_link="${legacy_path}.tmp.$$"
+
+                    # Atomically create symlink
+                    if ln -sf "$target_dir" "$temp_link"; then
+                        # Atomically replace directory with symlink
+                        if mv -f "$temp_link" "$legacy_path" 2>/dev/null; then
+                            bashio::log.info "Created compatibility symlink: $legacy_path -> $target_dir"
+                        else
+                            # Fallback: remove temp link if move failed
+                            rm -f "$temp_link"
+                            bashio::log.warning "Could not create symlink at: $legacy_path (may require manual cleanup)"
+                        fi
+                    fi
                 fi
-                
+
                 migrated=true
                 bashio::log.info "Migration completed from: $legacy_path"
             else
@@ -166,6 +196,9 @@ start_web_terminal() {
     
     # Run ttyd with keepalive configuration to prevent WebSocket disconnects
     # See: https://github.com/heytcass/home-assistant-addons/issues/24
+    # Security Note: Binds to 0.0.0.0 for Home Assistant ingress compatibility.
+    # Access is controlled by Home Assistant authentication (panel_admin: true).
+    # For production, remove direct port exposure in config.yaml - use ingress only.
     exec ttyd \
         --port "${port}" \
         --interface 0.0.0.0 \

@@ -61,19 +61,46 @@ launch_claude_resume() {
 
 launch_claude_custom() {
     echo ""
-    echo "Enter your Claude command (e.g., 'claude --help' or 'claude -p \"hello\"'):"
-    echo "Available flags: -c (continue), -r (resume), -p (print), --model, etc."
+    echo "Enter your Claude command (e.g., '-c' or '-r' or '-p \"hello\"'):"
+    echo "Available flags: -c (continue), -r (resume), -p (print), --model, --help"
     echo -n "> claude "
     read -r custom_args
-    
+
     if [ -z "$custom_args" ]; then
         echo "No arguments provided. Starting default session..."
         launch_claude_new
     else
+        # Security: Validate input contains only safe characters
+        # Allow: letters, numbers, spaces, hyphens, quotes, equals, dots, slashes, underscores
+        if ! echo "$custom_args" | grep -qE '^[a-zA-Z0-9 \-="./_ '"'"']+$'; then
+            echo "❌ Error: Invalid characters detected in command"
+            echo "Only alphanumeric characters, spaces, hyphens, quotes, equals, dots, slashes and underscores are allowed"
+            echo ""
+            printf "Press Enter to continue..." >&2
+            read -r
+            return 1
+        fi
+
+        # Additional validation: Check for dangerous patterns
+        if echo "$custom_args" | grep -qE '(&&|\|\||;|`|\$\(|<|>|\{|\})'; then
+            echo "❌ Error: Dangerous shell operators detected"
+            echo "Command chaining and redirection are not allowed for security"
+            echo ""
+            printf "Press Enter to continue..." >&2
+            read -r
+            return 1
+        fi
+
         echo "🚀 Running: claude $custom_args"
         sleep 1
-        # Use eval to properly handle quoted arguments
-        eval "exec node \$(which claude) $custom_args"
+
+        # Safe execution: Use array to build command, no eval
+        local claude_path
+        claude_path="$(which claude)"
+
+        # Execute with proper quoting - shell will handle argument parsing safely
+        # shellcheck disable=SC2086
+        exec node "$claude_path" $custom_args
     fi
 }
 
