@@ -3,6 +3,17 @@
 # Claude Authentication Helper
 # Provides alternative authentication methods when clipboard paste doesn't work
 
+# Security: Set up trap to clean up temporary files on exit
+TEMP_AUTH_FILE=""
+cleanup_temp_files() {
+    if [ -n "$TEMP_AUTH_FILE" ] && [ -f "$TEMP_AUTH_FILE" ]; then
+        # Secure deletion: overwrite before removing
+        dd if=/dev/zero of="$TEMP_AUTH_FILE" bs=1 count=$(stat -c%s "$TEMP_AUTH_FILE" 2>/dev/null || echo 0) 2>/dev/null
+        rm -f "$TEMP_AUTH_FILE"
+    fi
+}
+trap cleanup_temp_files EXIT INT TERM
+
 show_auth_menu() {
     clear
     echo "╔══════════════════════════════════════════════════════════════╗"
@@ -32,14 +43,20 @@ manual_auth_input() {
         return 1
     fi
 
-    # Save to temp file for Claude to read
-    echo "$auth_code" > /tmp/claude-auth-code
+    # Security: Create secure temporary file with restricted permissions
+    TEMP_AUTH_FILE=$(mktemp -t claude-auth.XXXXXXXXXX)
+    chmod 600 "$TEMP_AUTH_FILE"
+
+    # Save to secure temp file
+    echo "$auth_code" > "$TEMP_AUTH_FILE"
     echo ""
-    echo "✅ Code saved. Starting Claude authentication..."
+    echo "✅ Code saved securely. Starting Claude authentication..."
     sleep 1
 
     # Try to pipe the code to Claude
     echo "$auth_code" | node "$(which claude)"
+
+    # Cleanup will happen via trap handler
 }
 
 read_auth_from_file() {
@@ -49,6 +66,15 @@ read_auth_from_file() {
     echo "Looking for authentication code in: $auth_file"
 
     if [ -f "$auth_file" ]; then
+        # Security: Check file permissions before reading
+        local file_perms
+        file_perms=$(stat -c '%a' "$auth_file" 2>/dev/null)
+        if [ "$file_perms" != "600" ] && [ "$file_perms" != "400" ]; then
+            echo "⚠️  Warning: Auth file has insecure permissions ($file_perms)"
+            echo "Fixing permissions to 600..."
+            chmod 600 "$auth_file"
+        fi
+
         auth_code=$(cat "$auth_file")
         if [ -z "$auth_code" ]; then
             echo "❌ File exists but is empty"
@@ -61,16 +87,18 @@ read_auth_from_file() {
         # Try to pipe the code to Claude
         echo "$auth_code" | node "$(which claude)"
 
-        # Clean up the file after use
+        # Secure cleanup: overwrite before removal
+        dd if=/dev/zero of="$auth_file" bs=1 count=$(stat -c%s "$auth_file" 2>/dev/null || echo 0) 2>/dev/null
         rm -f "$auth_file"
-        echo "🧹 Cleaned up auth code file"
+        echo "🧹 Securely cleaned up auth code file"
     else
         echo "❌ File not found: $auth_file"
         echo ""
         echo "To use this method:"
         echo "1. Create the file in Home Assistant's config directory"
         echo "2. Paste your authentication code in the file"
-        echo "3. Save the file and try again"
+        echo "3. Save the file with 600 permissions: chmod 600 /config/auth-code.txt"
+        echo "4. Try again"
         return 1
     fi
 }

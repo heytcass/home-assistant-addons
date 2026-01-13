@@ -36,14 +36,22 @@ schema:
   auto_launch_claude: bool?
 
 # Volume mappings for file access
+# Security: Consider using config:ro (read-only) if Claude doesn't need to modify HA configs
+# Using rw to allow Claude to help with configuration editing - restrict if not needed
 map:
-  - config:rw    # Access to Home Assistant configuration files
+  - config:rw    # Access to Home Assistant configuration files (read-write)
 
 # API access for Home Assistant integration
+# Security: Reduced permissions from 'manager' to 'default' for least privilege
+# Note: 'manager' role allows installing add-ons and system modifications
+# If you need elevated API access for advanced use cases, consider:
+#   - hassio_role: manager (allows add-on/system management)
+#   - homeassistant_api: true (full entity/service access)
+# Current settings provide basic functionality without elevated privileges
 hassio_api: true
-hassio_role: manager
-homeassistant_api: true
-auth_api: true
+hassio_role: default
+homeassistant_api: false
+auth_api: false
 
 # Service startup configuration
 startup: services
