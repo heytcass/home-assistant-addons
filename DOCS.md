@@ -17,7 +17,12 @@ Follow these steps to install the add-on:
 
 ## Configuration
 
-No configuration is needed! The add-on uses OAuth authentication, so you'll be prompted to log in to your Anthropic account the first time you use it.
+The add-on works out of the box with sensible defaults. Optional configuration:
+
+- **auto_launch_claude** (default: `true`): Automatically launch Claude when opening the terminal
+- **auto_resume_session** (default: `true`): Automatically resume your most recent conversation
+
+The add-on uses OAuth authentication, so you'll be prompted to log in to your Anthropic account the first time you use it.
 
 ## Usage
 
@@ -31,7 +36,7 @@ The Claude Code CLI launches automatically when you open the terminal. You can i
 - `claude process myfile.py` - Have Claude analyze a file
 - `claude --editor` - Start an interactive editor session
 
-All your files are stored in `/config/claude-code`, which persists between restarts.
+The terminal starts in the `/config` directory, giving you access to all your Home Assistant configuration files. Claude's authentication and session data persists between restarts in `/data/.config/claude/`.
 
 ## Home Assistant-Specific Use Cases
 

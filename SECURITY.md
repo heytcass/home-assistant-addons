@@ -6,7 +6,7 @@ This document outlines the security measures implemented in the Claude Terminal 
 
 ## Security Fixes Implemented
 
-### Critical Vulnerabilities Fixed (v1.4.3+)
+### Critical Vulnerabilities Fixed (v1.4.2+)
 
 #### 1. Command Injection Prevention
 **Location**: `claude-terminal/scripts/claude-session-picker.sh`, `config/scripts/claude-session-picker.sh`
@@ -97,7 +97,7 @@ auth_api: true                 # For authentication tokens
 
 **Changes**:
 - Added `CLAUDE_VERSION` ARG for package version pinning
-- Reduced attack surface by removing unnecessary packages (git, vim, nano, wget)
+- Includes essential development tools (git, Python, jq) for Claude workflows
 - Added HEALTHCHECK for service monitoring
 - Documented root execution requirement (Home Assistant limitation)
 - Added instructions for version pinning
@@ -195,7 +195,13 @@ Before deploying to production:
 
 ## Version History
 
-### v1.4.3 - Security Hardening Release
+### v1.5.0 - Current Release
+- Auto-resume session functionality
+- Git integration for version control
+- Enhanced user experience
+- All security fixes from v1.4.2 maintained
+
+### v1.4.2 - Security Hardening Release
 - Fixed command injection vulnerability (CRITICAL)
 - Fixed insecure credential storage (CRITICAL)
 - Fixed world-readable credential files (CRITICAL)
@@ -205,9 +211,9 @@ Before deploying to production:
 - Added input validation throughout
 - Improved documentation
 
-### v1.4.2 and earlier
+### v1.4.1 and earlier
 - See git history for changes
-- Contains critical security vulnerabilities
+- Versions before v1.4.2 contain critical security vulnerabilities
 - **Not recommended for production use**
 
 ## Compliance Notes
@@ -237,5 +243,5 @@ This add-on handles:
 
 ---
 
-**Last Updated**: 2026-01-13
+**Last Updated**: 2026-01-14
 **Security Contact**: Via GitHub Security Advisories
