@@ -29,11 +29,11 @@ ports_description:
 
 # Add-on configuration options
 options:
-  auto_launch_claude:
-    name: "Auto-launch Claude"
-    description: "Auto-start Claude on terminal open (disable for session picker)"
+  auto_launch_claude: true
+  auto_resume_session: true
 schema:
   auto_launch_claude: bool?
+  auto_resume_session: bool?
 
 # Volume mappings for file access
 # Security: Consider using config:ro (read-only) if Claude doesn't need to modify HA configs

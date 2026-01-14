@@ -155,21 +155,33 @@ setup_session_picker() {
 # Determine Claude launch command based on configuration
 get_claude_launch_command() {
     local auto_launch_claude
-    
-    # Get configuration value, default to true for backward compatibility
+    local auto_resume_session
+
+    # Get configuration values, default to true for backward compatibility
     auto_launch_claude=$(bashio::config 'auto_launch_claude' 'true')
-    
+    auto_resume_session=$(bashio::config 'auto_resume_session' 'true')
+
     if [ "$auto_launch_claude" = "true" ]; then
-        # Original behavior: auto-launch Claude directly
-        echo "clear && echo 'Welcome to Claude Terminal!' && echo '' && echo 'Starting Claude...' && sleep 1 && node \$(which claude)"
+        # Check if auto-resume is enabled
+        if [ "$auto_resume_session" = "true" ]; then
+            # Auto-resume most recent session
+            echo "clear && echo 'Welcome to Claude Terminal!' && echo '' && echo 'Resuming most recent Claude session...' && sleep 1 && node \$(which claude) -c"
+        else
+            # Original behavior: auto-launch new Claude session
+            echo "clear && echo 'Welcome to Claude Terminal!' && echo '' && echo 'Starting Claude...' && sleep 1 && node \$(which claude)"
+        fi
     else
-        # New behavior: show interactive session picker
+        # Show interactive session picker
         if [ -f /usr/local/bin/claude-session-picker ]; then
             echo "clear && /usr/local/bin/claude-session-picker"
         else
             # Fallback if session picker is missing
             bashio::log.warning "Session picker not found, falling back to auto-launch"
-            echo "clear && echo 'Welcome to Claude Terminal!' && echo '' && echo 'Starting Claude...' && sleep 1 && node \$(which claude)"
+            if [ "$auto_resume_session" = "true" ]; then
+                echo "clear && echo 'Welcome to Claude Terminal!' && echo '' && echo 'Resuming most recent Claude session...' && sleep 1 && node \$(which claude) -c"
+            else
+                echo "clear && echo 'Welcome to Claude Terminal!' && echo '' && echo 'Starting Claude...' && sleep 1 && node \$(which claude)"
+            fi
         fi
     fi
 }
@@ -188,11 +200,14 @@ start_web_terminal() {
     # Get the appropriate launch command based on configuration
     local launch_command
     launch_command=$(get_claude_launch_command)
-    
+
     # Log the configuration being used
     local auto_launch_claude
+    local auto_resume_session
     auto_launch_claude=$(bashio::config 'auto_launch_claude' 'true')
+    auto_resume_session=$(bashio::config 'auto_resume_session' 'true')
     bashio::log.info "Auto-launch Claude: ${auto_launch_claude}"
+    bashio::log.info "Auto-resume session: ${auto_resume_session}"
     
     # Run ttyd with keepalive configuration to prevent WebSocket disconnects
     # See: https://github.com/heytcass/home-assistant-addons/issues/24

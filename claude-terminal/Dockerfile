@@ -8,12 +8,13 @@ ARG CLAUDE_VERSION=latest
 # Check latest version: npm view @anthropic-ai/claude-code version
 
 # Install packages in a single layer to minimize image size
-# Security: Reduced package list - removed git, vim, nano, wget (use 'apk add' in terminal if needed)
+# Security: Essential packages for Claude Code development workflow
 RUN apk add --no-cache \
     nodejs \
     npm \
     bash \
     curl \
+    git \
     python3 \
     py3-pip \
     py3-requests \

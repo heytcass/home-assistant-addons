@@ -15,8 +15,8 @@ show_banner() {
 show_menu() {
     echo "Choose your Claude session type:"
     echo ""
-    echo "  1) 🆕 New interactive session (default)"
-    echo "  2) ⏩ Continue most recent conversation (-c)"
+    echo "  1) ⏩ Continue most recent conversation (default)"
+    echo "  2) 🆕 New interactive session"
     echo "  3) 📋 Resume from conversation list (-r)"
     echo "  4) ⚙️  Custom Claude command (manual flags)"
     echo "  5) 🔐 Authentication helper (if paste doesn't work)"
@@ -131,10 +131,10 @@ main() {
         
         case "$choice" in
             1)
-                launch_claude_new
+                launch_claude_continue
                 ;;
             2)
-                launch_claude_continue
+                launch_claude_new
                 ;;
             3)
                 launch_claude_resume
