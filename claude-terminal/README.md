@@ -18,7 +18,9 @@ This add-on provides a web-based terminal interface with Claude Code CLI pre-ins
 ## Features
 
 - **Web Terminal Interface**: Access Claude through a browser-based terminal using ttyd
+- **Auto-Resume Sessions**: Automatically continues your most recent conversation when reopening the terminal
 - **Auto-Launch**: Claude starts automatically when you open the terminal
+- **Git Integration**: Version control tools included for repository management
 - **Latest Claude Code CLI**: Pre-installed with Anthropic's official CLI (@latest)
 - **No Configuration Needed**: Uses OAuth authentication for easy setup
 - **Direct Config Access**: Terminal starts in your `/config` directory for immediate access to all Home Assistant files
@@ -59,12 +61,20 @@ claude-logout
 
 ## Configuration
 
-The add-on requires no configuration. All settings are handled automatically:
+The add-on works out of the box with sensible defaults. Optional configuration:
 
+### Configuration Options
+- **auto_launch_claude** (default: `true`): Automatically launch Claude on terminal open
+  - Set to `false` to show an interactive session picker instead
+- **auto_resume_session** (default: `true`): Automatically resume the most recent conversation
+  - Set to `false` to always start new sessions
+  - Only applies when `auto_launch_claude` is enabled
+
+### Default Settings
 - **Port**: Web interface runs on port 7681
-- **Authentication**: OAuth with Anthropic (credentials stored securely in `/config/claude-config/`)
+- **Authentication**: OAuth with Anthropic (credentials stored securely in `/data/.config/claude/`)
 - **Terminal**: Full bash environment with Claude Code CLI pre-installed
-- **Volumes**: Access to both `/config` (Home Assistant) and `/addons` (for development)
+- **Volumes**: Access to `/config` (Home Assistant configuration)
 
 ## Troubleshooting
 
@@ -105,7 +115,8 @@ test-endpoint
 
 ## Security
 
-Version 1.0.2 includes important security improvements:
+Security improvements included in recent versions:
+- ✅ **Least Privilege**: Reduced API permissions (default role instead of manager)
 - ✅ **Secure Credential Management**: Limited filesystem access to safe directories only
 - ✅ **Safe Cleanup Operations**: No more dangerous system-wide file deletions
 - ✅ **Proper Permission Handling**: Consistent file permissions (600) for credentials
@@ -134,21 +145,24 @@ For detailed usage instructions, see the [documentation](DOCS.md).
 
 ## Version History
 
-### v1.0.2 (Current) - Security & Bug Fix Release
-- 🔒 **CRITICAL**: Fixed dangerous filesystem operations
-- 🐛 Added missing armv7 architecture support
-- 🔧 Pinned NPM packages and improved error handling
-- 🛠️ Enhanced development environment with Podman support
+### v1.5.0 (Current) - Session Continuity & Git Integration
+- ✨ **Auto-Resume**: Automatically continue most recent conversation on terminal reopen
+- 🔧 **Git Support**: Version control tools now included in Docker image
+- 🎯 **Enhanced UX**: Session picker defaults to "Continue" for better workflow
 
-### v1.0.1
-- Improved credential management
-- Enhanced startup reliability
+### v1.4.2 - Security Hardening
+- 🔒 Reduced API permissions to least privilege (default role)
+- 📝 Enhanced security documentation
 
-### v1.0.0
-- Initial stable release
-- Web terminal interface with ttyd
-- Pre-installed Claude Code CLI
-- OAuth authentication support
+### v1.4.1 - Bug Fixes
+- 🐛 Fixed missing Python and development tools
+- ➕ Added yq for YAML processing
+
+### v1.4.0 - Development Tools
+- 🛠️ Added Python 3.11 with essential libraries
+- 📦 Included git, vim, jq, tree, wget
+
+See [CHANGELOG.md](CHANGELOG.md) for complete version history.
 
 ## Useful Links
 

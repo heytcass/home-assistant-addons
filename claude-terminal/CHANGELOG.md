@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.5.0
+
+### ✨ New Features
+- **Auto-Resume Session**: Added `auto_resume_session` configuration option (default: true)
+  - Automatically continues the most recent Claude conversation when terminal reopens
+  - Provides seamless session continuity without manual intervention
+  - Can be disabled to always start fresh sessions
+- **Git Support**: Added git package to Docker image for version control operations
+  - Enables Claude to perform git operations directly
+  - Essential for development workflows and repository management
+- **Updated Session Picker**: "Continue most recent conversation" is now the default option
+  - Reflects the most common use case for session restoration
+  - Streamlined user experience with logical option ordering
+
+### 🛠️ Improvements
+- Enhanced startup messages to indicate session resumption
+- Added configuration logging for better debugging
+- Improved fallback behavior when session picker is unavailable
+
+## 1.4.2
+
+### 🔒 Security Improvements
+- **Reduced API permissions**: Changed from 'manager' to 'default' hassio_role for least privilege
+- **Removed unnecessary API access**: Disabled homeassistant_api and auth_api by default
+- **Updated security documentation**: Added clear notes about permission implications
+
 ## 1.4.1
 
 ### 🐛 Bug Fixes

@@ -49,23 +49,25 @@ curl -X GET http://localhost:7681/
 
 ### Key Components
 1. **Web Terminal**: Uses ttyd to provide browser-based terminal access
-2. **Credential Management**: Persistent authentication storage in `/config/claude-config/`
-3. **Service Integration**: Home Assistant ingress support with panel icon
-4. **Multi-Architecture**: Supports amd64, aarch64, armv7 platforms
+2. **Auto-Resume Sessions**: Automatically continues most recent conversation (configurable)
+3. **Git Integration**: Version control tools included for development workflows
+4. **Credential Management**: Persistent authentication storage in `/data/.config/claude/`
+5. **Service Integration**: Home Assistant ingress support with panel icon
+6. **Multi-Architecture**: Supports amd64, aarch64, armv7 platforms
 
 ### Credential System
 The add-on implements a sophisticated credential management system:
-- **Persistent Storage**: Credentials saved to `/config/claude-config/` (survives restarts)
-- **Multiple Locations**: Handles various Claude credential file locations
-- **Background Service**: Continuous credential monitoring and saving
+- **Persistent Storage**: Credentials saved to `/data/.config/claude/` (survives restarts)
+- **XDG Compliance**: Uses XDG Base Directory specification for proper config management
+- **Migration Support**: Automatically migrates from legacy credential locations
 - **Security**: Proper file permissions (600) and safe directory operations
 
 ### Container Execution Flow
-1. Initialize environment and create credential directories
+1. Initialize environment and create credential directories in `/data`
 2. Install ttyd and tools via apk
-3. Setup modular credential management scripts
-4. Start background credential monitoring service
-5. Launch ttyd web terminal with Claude auto-start
+3. Setup session picker and authentication helper scripts
+4. Migrate any existing credentials from legacy locations
+5. Launch ttyd web terminal with auto-resume or session picker
 
 ## Development Notes
 
@@ -80,8 +82,15 @@ podman build --build-arg BUILD_FROM=ghcr.io/home-assistant/amd64-base:3.19 -t lo
 # Create test config directory
 mkdir -p /tmp/test-config/claude-config
 
-# Configure session picker (optional)
-echo '{"auto_launch_claude": false}' > /tmp/test-config/options.json
+# Configure options (optional)
+# Default: auto-launch with auto-resume enabled
+echo '{"auto_launch_claude": true, "auto_resume_session": true}' > /tmp/test-config/options.json
+
+# Or disable auto-resume to always start fresh sessions
+# echo '{"auto_launch_claude": true, "auto_resume_session": false}' > /tmp/test-config/options.json
+
+# Or use interactive session picker
+# echo '{"auto_launch_claude": false}' > /tmp/test-config/options.json
 
 # Run test container
 podman run -d --name test-claude-dev -p 7681:7681 -v /tmp/test-config:/config local/claude-terminal:test
@@ -134,9 +143,11 @@ podman exec test-claude-dev chmod +x /opt/scripts/claude-session-picker.sh
 - **Permissions**: Credential files must have 600 permissions
 
 ### Key Environment Variables
-- `CLAUDE_CREDENTIALS_DIRECTORY=/config/claude-config`
-- `ANTHROPIC_CONFIG_DIR=/config/claude-config`
-- `HOME=/root`
+- `ANTHROPIC_CONFIG_DIR=/data/.config/claude`
+- `XDG_CONFIG_HOME=/data/.config`
+- `XDG_CACHE_HOME=/data/.cache`
+- `XDG_STATE_HOME=/data/.local/state`
+- `HOME=/data/home`
 
 ### Important Constraints
 - No sudo privileges available in development environment

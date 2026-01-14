@@ -20,8 +20,8 @@ podman build --build-arg BUILD_FROM=ghcr.io/home-assistant/amd64-base:3.19 \
   -t local/claude-terminal:test ./claude-terminal
 
 # 2. Create test configuration
-mkdir -p /tmp/test-config/claude-config
-echo '{"auto_launch_claude": false}' > /tmp/test-config/options.json
+mkdir -p /tmp/test-config
+echo '{"auto_launch_claude": true, "auto_resume_session": true}' > /tmp/test-config/options.json
 
 # 3. Run test container
 podman run -d --name test-claude-dev \
