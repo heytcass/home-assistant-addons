@@ -143,6 +143,16 @@ setup_session_picker() {
         bashio::log.warning "Session picker script not found, using auto-launch mode only"
     fi
 
+    # Setup smart resume helper
+    if [ -f "/opt/scripts/claude-smart-resume.sh" ]; then
+        if ! cp /opt/scripts/claude-smart-resume.sh /usr/local/bin/claude-smart-resume; then
+            bashio::log.error "Failed to copy claude-smart-resume script"
+            exit 1
+        fi
+        chmod +x /usr/local/bin/claude-smart-resume
+        bashio::log.info "Smart resume script installed successfully"
+    fi
+
     # Setup authentication helper if it exists
     if [ -f "/opt/scripts/claude-auth-helper.sh" ]; then
         chmod +x /opt/scripts/claude-auth-helper.sh
@@ -164,8 +174,14 @@ get_claude_launch_command() {
     if [ "$auto_launch_claude" = "true" ]; then
         # Check if auto-resume is enabled
         if [ "$auto_resume_session" = "true" ]; then
-            # Auto-resume most recent session
-            echo "clear && echo 'Welcome to Claude Terminal!' && echo '' && echo 'Resuming most recent Claude session...' && sleep 1 && node \$(which claude) -c"
+            # Use smart resume script that handles missing sessions gracefully
+            if [ -f /usr/local/bin/claude-smart-resume ]; then
+                echo "clear && echo 'Welcome to Claude Terminal!' && echo '' && /usr/local/bin/claude-smart-resume"
+            else
+                # Fallback: start new session if smart resume not available
+                bashio::log.warning "Smart resume script not found, starting new session"
+                echo "clear && echo 'Welcome to Claude Terminal!' && echo '' && echo 'Starting Claude...' && sleep 1 && node \$(which claude)"
+            fi
         else
             # Original behavior: auto-launch new Claude session
             echo "clear && echo 'Welcome to Claude Terminal!' && echo '' && echo 'Starting Claude...' && sleep 1 && node \$(which claude)"
@@ -177,8 +193,8 @@ get_claude_launch_command() {
         else
             # Fallback if session picker is missing
             bashio::log.warning "Session picker not found, falling back to auto-launch"
-            if [ "$auto_resume_session" = "true" ]; then
-                echo "clear && echo 'Welcome to Claude Terminal!' && echo '' && echo 'Resuming most recent Claude session...' && sleep 1 && node \$(which claude) -c"
+            if [ "$auto_resume_session" = "true" ] && [ -f /usr/local/bin/claude-smart-resume ]; then
+                echo "clear && echo 'Welcome to Claude Terminal!' && echo '' && /usr/local/bin/claude-smart-resume"
             else
                 echo "clear && echo 'Welcome to Claude Terminal!' && echo '' && echo 'Starting Claude...' && sleep 1 && node \$(which claude)"
             fi
