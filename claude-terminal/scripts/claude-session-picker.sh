@@ -48,9 +48,15 @@ launch_claude_new() {
 }
 
 launch_claude_continue() {
-    echo "⏩ Continuing most recent conversation..."
-    sleep 1
-    exec node "$(which claude)" -c
+    # Use smart resume if available, which handles missing sessions gracefully
+    if [ -f /usr/local/bin/claude-smart-resume ]; then
+        exec /usr/local/bin/claude-smart-resume
+    else
+        # Fallback to original behavior if smart resume not available
+        echo "⏩ Continuing most recent conversation..."
+        sleep 1
+        exec node "$(which claude)" -c
+    fi
 }
 
 launch_claude_resume() {
