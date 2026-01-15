@@ -39,14 +39,7 @@ RUN apk add --no-cache \
     && npm cache clean --force
 
 # Install uv for Python package management (required for uvx MCP servers like ha-mcp)
-# Uses official installation script from Astral (https://astral.sh/uv)
-# Supports all target architectures: amd64, aarch64, armv7
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
-    && export PATH="/root/.cargo/bin:$PATH" \
-    && uv --version
-
-# Ensure uv is in PATH for runtime
-ENV PATH="/root/.cargo/bin:$PATH"
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 # Security Note: This add-on runs as root (UID 0) due to Home Assistant requirements
 # - Needs access to /config (Home Assistant configuration)
