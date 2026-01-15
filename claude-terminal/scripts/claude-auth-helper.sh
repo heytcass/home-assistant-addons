@@ -32,14 +32,25 @@ manual_auth_input() {
         return 1
     fi
 
-    # Save to temp file for Claude to read
-    echo "$auth_code" > /tmp/claude-auth-code
+    # Validate auth code format (alphanumeric and common special chars only)
+    if ! echo "$auth_code" | grep -qE '^[a-zA-Z0-9_\-]+$'; then
+        echo "❌ Invalid authentication code format"
+        echo "Code should contain only alphanumeric characters, hyphens, and underscores"
+        return 1
+    fi
+
+    # Save to temp file with secure permissions
+    local temp_file="/tmp/claude-auth-code-$$"
+    (umask 077 && echo "$auth_code" > "$temp_file")
     echo ""
     echo "✅ Code saved. Starting Claude authentication..."
     sleep 1
 
     # Try to pipe the code to Claude
     echo "$auth_code" | node "$(which claude)"
+
+    # Clean up temp file
+    rm -f "$temp_file"
 }
 
 read_auth_from_file() {
@@ -48,10 +59,25 @@ read_auth_from_file() {
     echo ""
     echo "Looking for authentication code in: $auth_file"
 
+    # Security check: ensure it's a regular file, not a symlink
+    if [ -L "$auth_file" ]; then
+        echo "❌ Security error: File is a symlink"
+        echo "For security reasons, symlinks are not allowed"
+        return 1
+    fi
+
     if [ -f "$auth_file" ]; then
         auth_code=$(cat "$auth_file")
         if [ -z "$auth_code" ]; then
             echo "❌ File exists but is empty"
+            return 1
+        fi
+
+        # Validate auth code format
+        if ! echo "$auth_code" | grep -qE '^[a-zA-Z0-9_\-]+$'; then
+            echo "❌ Invalid authentication code format in file"
+            echo "Code should contain only alphanumeric characters, hyphens, and underscores"
+            rm -f "$auth_file"
             return 1
         fi
 
@@ -61,8 +87,8 @@ read_auth_from_file() {
         # Try to pipe the code to Claude
         echo "$auth_code" | node "$(which claude)"
 
-        # Clean up the file after use
-        rm -f "$auth_file"
+        # Securely clean up the file after use
+        shred -u "$auth_file" 2>/dev/null || rm -f "$auth_file"
         echo "🧹 Cleaned up auth code file"
     else
         echo "❌ File not found: $auth_file"

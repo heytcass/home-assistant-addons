@@ -28,6 +28,8 @@ RUN apk add --no-cache \
     && (npm config set fetch-timeout 300000 || true) \
     && for i in 1 2 3; do \
         echo "Attempt $i: Installing Claude Code CLI..." && \
+        # SECURITY NOTE: Using @latest for now, but consider pinning to specific version
+        # Example: npm install -g @anthropic-ai/claude-code@1.2.3
         npm install -g @anthropic-ai/claude-code@latest && \
         echo "Successfully installed Claude Code CLI" && \
         break || \
@@ -44,6 +46,11 @@ COPY run.sh /run.sh
 COPY scripts/ /opt/scripts/
 RUN chmod +x /run.sh \
     && chmod +x /opt/scripts/*.sh
+
+# Health check to ensure web terminal is responsive
+# Checks every 30 seconds, allows 10s timeout, 3 retries before marking unhealthy
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:7681/ || exit 1
 
 # Use exec form for better signal handling
 CMD ["/run.sh"]
