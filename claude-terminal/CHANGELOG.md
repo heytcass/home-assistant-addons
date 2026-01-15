@@ -1,5 +1,41 @@
 # Changelog
 
+## 1.5.0
+
+### ✨ New Features
+- **Persistent Package Management** (#32): Install APK and pip packages that survive container restarts
+  - New `persist-install` command for installing packages from the terminal
+  - Configuration options: `persistent_apk_packages` and `persistent_pip_packages`
+  - Packages installed via command or config are automatically reinstalled on startup
+  - Supports both Home Assistant add-on config and local state file
+  - Inspired by community contribution from [@ESJavadex](https://github.com/ESJavadex)
+
+### 📦 Usage Examples
+```bash
+# Install APK packages persistently
+persist-install apk vim htop
+
+# Install pip packages persistently
+persist-install pip requests pandas numpy
+
+# List all persistent packages
+persist-install list
+
+# Remove from persistence (package remains until restart)
+persist-install remove apk vim
+```
+
+### 🛠️ Configuration
+Add to your add-on config to auto-install packages:
+```yaml
+persistent_apk_packages:
+  - vim
+  - htop
+persistent_pip_packages:
+  - requests
+  - pandas
+```
+
 ## 1.4.1
 
 ### 🐛 Bug Fixes
