@@ -1,7 +1,7 @@
 ---
 name: "Claude Terminal"
-description: "Terminal interface for Anthropic's Claude Code CLI with persistent auth"
-version: "1.4.2"
+description: "Terminal interface for Anthropic's Claude Code CLI with persistent auth and packages"
+version: "1.5.0"
 slug: "claude_terminal"
 init: false
 
@@ -29,11 +29,15 @@ ports_description:
 
 # Add-on configuration options
 options:
-  auto_launch_claude:
-    name: "Auto-launch Claude"
-    description: "Auto-start Claude on terminal open (disable for session picker)"
+  auto_launch_claude: true
+  persistent_apk_packages: []
+  persistent_pip_packages: []
 schema:
   auto_launch_claude: bool?
+  persistent_apk_packages:
+    - str
+  persistent_pip_packages:
+    - str
 
 # Volume mappings for file access
 map:

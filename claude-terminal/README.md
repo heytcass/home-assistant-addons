@@ -27,6 +27,7 @@ This add-on provides a web-based terminal interface with Claude Code CLI pre-ins
 - **Multi-Architecture Support**: Works on amd64, aarch64, and armv7 platforms
 - **Secure Credential Management**: Persistent authentication with safe credential storage
 - **Automatic Recovery**: Built-in fallbacks and error handling for reliable operation
+- **Persistent Package Management**: Install APK and pip packages that survive container restarts
 
 ## Quick Start
 
@@ -47,6 +48,13 @@ claude-auth debug
 
 # Log out and re-authenticate
 claude-logout
+
+# Install packages that persist across restarts
+persist-install apk vim htop
+persist-install pip requests pandas
+
+# List persistent packages
+persist-install list
 ```
 
 ## Installation
@@ -59,12 +67,32 @@ claude-logout
 
 ## Configuration
 
-The add-on requires no configuration. All settings are handled automatically:
+The add-on works out of the box with sensible defaults. Optional configuration:
 
+| Option | Default | Description |
+|--------|---------|-------------|
+| `auto_launch_claude` | `true` | Auto-start Claude on terminal open (set to `false` for session picker) |
+| `persistent_apk_packages` | `[]` | List of APK packages to install on startup |
+| `persistent_pip_packages` | `[]` | List of pip packages to install on startup |
+
+### Example Configuration
+```yaml
+auto_launch_claude: true
+persistent_apk_packages:
+  - vim
+  - htop
+  - rsync
+persistent_pip_packages:
+  - requests
+  - pandas
+  - numpy
+```
+
+### Default Settings
 - **Port**: Web interface runs on port 7681
-- **Authentication**: OAuth with Anthropic (credentials stored securely in `/config/claude-config/`)
+- **Authentication**: OAuth with Anthropic (credentials stored securely in `/data/.config/claude/`)
 - **Terminal**: Full bash environment with Claude Code CLI pre-installed
-- **Volumes**: Access to both `/config` (Home Assistant) and `/addons` (for development)
+- **Volumes**: Access to `/config` (Home Assistant configuration)
 
 ## Troubleshooting
 
@@ -134,21 +162,23 @@ For detailed usage instructions, see the [documentation](DOCS.md).
 
 ## Version History
 
-### v1.0.2 (Current) - Security & Bug Fix Release
-- 🔒 **CRITICAL**: Fixed dangerous filesystem operations
-- 🐛 Added missing armv7 architecture support
-- 🔧 Pinned NPM packages and improved error handling
-- 🛠️ Enhanced development environment with Podman support
+### v1.5.0 (Current) - Persistent Packages
+- **Persistent Package Management**: Install APK and pip packages that survive restarts
+- New `persist-install` command for easy package management
+- Configuration options for auto-installing packages on startup
+- Inspired by community contributions from [@ESJavadex](https://github.com/ESJavadex)
 
-### v1.0.1
-- Improved credential management
-- Enhanced startup reliability
+### v1.4.x
+- Added Python 3.11 and development tools (git, vim, jq, wget, tree)
+- ttyd keepalive options to prevent WebSocket disconnects
+- Home Assistant API access with examples
 
-### v1.0.0
-- Initial stable release
-- Web terminal interface with ttyd
-- Pre-installed Claude Code CLI
-- OAuth authentication support
+### v1.3.x
+- Interactive session picker menu
+- Authentication helper for clipboard issues
+- Health check diagnostics
+
+See [CHANGELOG.md](CHANGELOG.md) for complete version history.
 
 ## Useful Links
 
