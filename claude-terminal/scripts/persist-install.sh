@@ -131,7 +131,7 @@ install_pip() {
     echo -e "${BLUE}Installing pip packages:${NC} ${packages[*]}"
 
     # Install packages
-    if pip3 install --no-cache-dir "${packages[@]}"; then
+    if pip3 install --break-system-packages --no-cache-dir "${packages[@]}"; then
         echo -e "${GREEN}Installation successful!${NC}"
 
         # Add to persistence config
