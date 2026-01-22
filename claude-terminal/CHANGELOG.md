@@ -1,5 +1,20 @@
 # Changelog
 
+## [Unreleased]
+
+### 🔄 Changed
+- **Native Claude Code Installation**: Switched from npm package to official native installer
+  - Uses `curl -fsSL https://claude.ai/install.sh | bash` instead of `npm install -g @anthropic-ai/claude-code`
+  - Native binary provides automatic background updates from Anthropic
+  - Faster startup (no Node.js interpreter overhead)
+  - Claude binary symlinked to `/usr/local/bin/claude` for easy access
+- **Simplified execution**: All scripts now call `claude` directly instead of `node $(which claude)`
+- **Cleaner Dockerfile**: Removed npm retry/timeout configuration (no longer needed)
+
+### 📦 Notes
+- Node.js and npm remain available as development tools
+- Existing authentication and configuration files are unaffected
+
 ## 1.5.0
 
 ### ✨ New Features

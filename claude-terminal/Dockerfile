@@ -1,14 +1,13 @@
 ARG BUILD_FROM
 FROM ${BUILD_FROM}
 
-# Install packages in a single layer to minimize image size
-# Add retry logic for npm installation to handle network issues
+# Install system packages and development tools
 RUN apk add --no-cache \
-    nodejs \
-    npm \
     bash \
     curl \
     nano \
+    nodejs \
+    npm \
     python3 \
     py3-pip \
     py3-requests \
@@ -20,20 +19,12 @@ RUN apk add --no-cache \
     wget \
     jq \
     tree \
-    yq \
-    && (npm config set registry https://registry.npmjs.org/ || true) \
-    && (npm config set fetch-retries 3 || true) \
-    && (npm config set fetch-retry-mintimeout 20000 || true) \
-    && (npm config set fetch-retry-maxtimeout 120000 || true) \
-    && (npm config set fetch-timeout 300000 || true) \
-    && for i in 1 2 3; do \
-        echo "Attempt $i: Installing Claude Code CLI..." && \
-        npm install -g @anthropic-ai/claude-code@latest && \
-        echo "Successfully installed Claude Code CLI" && \
-        break || \
-        (echo "Attempt $i failed, retrying in 10 seconds..." && sleep 10); \
-    done \
-    && npm cache clean --force
+    yq
+
+# Install Claude Code CLI using native installer
+# The installer places the binary in ~/.local/bin
+RUN curl -fsSL https://claude.ai/install.sh | bash \
+    && ln -sf /root/.local/bin/claude /usr/local/bin/claude
 
 # Create directory for Claude configuration and set working directory
 RUN mkdir -p /config/claude-config
