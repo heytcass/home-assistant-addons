@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## 1.6.0 - 2026-01-26
 
 ### 🔄 Changed
 - **Native Claude Code Installation**: Switched from npm package to official native installer
