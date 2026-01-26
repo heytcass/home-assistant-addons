@@ -165,7 +165,7 @@ install_persistent_packages() {
     if [ -n "$pip_packages" ]; then
         bashio::log.info "Installing persistent pip packages: $pip_packages"
         # shellcheck disable=SC2086
-        if pip3 install --no-cache-dir $pip_packages; then
+        if pip3 install --break-system-packages --no-cache-dir $pip_packages; then
             bashio::log.info "pip packages installed successfully"
         else
             bashio::log.warning "Some pip packages failed to install"
