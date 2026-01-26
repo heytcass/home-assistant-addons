@@ -19,7 +19,7 @@ This add-on provides a web-based terminal interface with Claude Code CLI pre-ins
 
 - **Web Terminal Interface**: Access Claude through a browser-based terminal using ttyd
 - **Auto-Launch**: Claude starts automatically when you open the terminal
-- **Latest Claude Code CLI**: Pre-installed with Anthropic's official CLI (@latest)
+- **Native Claude Code CLI**: Pre-installed using Anthropic's official native installer with automatic updates
 - **No Configuration Needed**: Uses OAuth authentication for easy setup
 - **Direct Config Access**: Terminal starts in your `/config` directory for immediate access to all Home Assistant files
 - **Home Assistant Integration**: Access directly from your dashboard
@@ -161,6 +161,11 @@ test-endpoint    # Test web endpoint availability
 For detailed usage instructions, see the [documentation](DOCS.md).
 
 ## Version History
+
+### Unreleased - Native Installation
+- **Native Claude Code Installation**: Switched to official native installer
+- Automatic background updates from Anthropic
+- Faster startup without Node.js interpreter overhead
 
 ### v1.5.0 (Current) - Persistent Packages
 - **Persistent Package Management**: Install APK and pip packages that survive restarts

@@ -25,7 +25,7 @@ Your OAuth credentials are stored in the `/config/claude-config` directory and w
 Claude launches automatically when you open the terminal. You can also start Claude manually with:
 
 ```bash
-node /usr/local/bin/claude
+claude
 ```
 
 ### Common Commands
@@ -49,7 +49,7 @@ The terminal starts directly in your `/config` directory, giving you immediate a
 
 ## Troubleshooting
 
-- If Claude doesn't start automatically, try running `node /usr/local/bin/claude -i` manually
+- If Claude doesn't start automatically, try running `claude -i` manually
 - If you see permission errors, try restarting the add-on
 - If you have authentication issues, try logging out and back in
 - Check the add-on logs for any error messages
