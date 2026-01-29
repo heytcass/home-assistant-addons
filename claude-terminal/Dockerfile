@@ -39,6 +39,8 @@ RUN apk add --no-cache \
     && npm cache clean --force
 
 # Install uv for Python package management (required for uvx MCP servers like ha-mcp)
+# Copy pre-built binaries from official uv Docker image (Alpine/musl compatible)
+# This is the recommended approach for Alpine Linux per uv documentation
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 # Security Note: This add-on runs as root (UID 0) due to Home Assistant requirements
