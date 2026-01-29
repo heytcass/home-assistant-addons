@@ -21,8 +21,9 @@ This add-on provides a web-based terminal interface with Claude Code CLI pre-ins
 - **Auto-Resume Sessions**: Automatically continues your most recent conversation when reopening the terminal
 - **Auto-Launch**: Claude starts automatically when you open the terminal
 - **Git Integration**: Version control tools included for repository management
-- **Latest Claude Code CLI**: Pre-installed with Anthropic's official CLI (@latest)
+- **Native Claude Code CLI**: Pre-installed using Anthropic's official native installer with automatic updates
 - **No Configuration Needed**: Uses OAuth authentication for easy setup
+- **Persistent Package Management**: Install APK and pip packages that survive container restarts
 - **Direct Config Access**: Terminal starts in your `/config` directory for immediate access to all Home Assistant files
 - **Home Assistant Integration**: Access directly from your dashboard
 - **Panel Icon**: Quick access from the sidebar with the code-braces icon
@@ -49,6 +50,13 @@ claude-auth debug
 
 # Log out and re-authenticate
 claude-logout
+
+# Install packages that persist across restarts
+persist-install apk vim htop
+persist-install pip requests pandas
+
+# List persistent packages
+persist-install list
 ```
 
 ## Installation
@@ -69,6 +77,22 @@ The add-on works out of the box with sensible defaults. Optional configuration:
 - **auto_resume_session** (default: `true`): Automatically resume the most recent conversation
   - Set to `false` to always start new sessions
   - Only applies when `auto_launch_claude` is enabled
+- **persistent_apk_packages** (default: `[]`): List of APK packages to install on startup
+- **persistent_pip_packages** (default: `[]`): List of pip packages to install on startup
+
+### Example Configuration
+```yaml
+auto_launch_claude: true
+auto_resume_session: true
+persistent_apk_packages:
+  - vim
+  - htop
+  - rsync
+persistent_pip_packages:
+  - requests
+  - pandas
+  - numpy
+```
 
 ### Default Settings
 - **Port**: Web interface runs on port 7681
@@ -145,22 +169,21 @@ For detailed usage instructions, see the [documentation](DOCS.md).
 
 ## Version History
 
-### v1.5.0 (Current) - Session Continuity & Git Integration
+### v1.6.0 (Current) - Native Installer & Persistent Packages
+- 🔄 **Native Installation**: Switched to official Claude native installer with automatic updates
+- 📦 **Persistent Packages**: Install APK and pip packages that survive container restarts
+- 🐛 **Fixed Auto-Resume**: Improved session detection for better resume functionality
+- 🛠️ **PEP-0668 Fix**: Added compatibility for Python 3.11+ pip installations
+
+### v1.5.0 - Session Continuity & Git Integration
 - ✨ **Auto-Resume**: Automatically continue most recent conversation on terminal reopen
 - 🔧 **Git Support**: Version control tools now included in Docker image
 - 🎯 **Enhanced UX**: Session picker defaults to "Continue" for better workflow
 
-### v1.4.2 - Security Hardening
-- 🔒 Reduced API permissions to least privilege (default role)
-- 📝 Enhanced security documentation
-
-### v1.4.1 - Bug Fixes
-- 🐛 Fixed missing Python and development tools
-- ➕ Added yq for YAML processing
-
-### v1.4.0 - Development Tools
+### v1.4.x - Security & Development Tools
+- 🔒 Reduced API permissions to least privilege
 - 🛠️ Added Python 3.11 with essential libraries
-- 📦 Included git, vim, jq, tree, wget
+- 📦 Included git, vim, jq, tree, wget, yq
 
 See [CHANGELOG.md](CHANGELOG.md) for complete version history.
 

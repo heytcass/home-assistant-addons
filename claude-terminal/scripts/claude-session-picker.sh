@@ -44,7 +44,7 @@ get_user_choice() {
 launch_claude_new() {
     echo "🚀 Starting new Claude session..."
     sleep 1
-    exec node "$(which claude)"
+    exec claude
 }
 
 launch_claude_continue() {
@@ -55,14 +55,14 @@ launch_claude_continue() {
         # Fallback to original behavior if smart resume not available
         echo "⏩ Continuing most recent conversation..."
         sleep 1
-        exec node "$(which claude)" -c
+        exec claude -c
     fi
 }
 
 launch_claude_resume() {
     echo "📋 Opening conversation list for selection..."
     sleep 1
-    exec node "$(which claude)" -r
+    exec claude -r
 }
 
 launch_claude_custom() {
@@ -100,13 +100,9 @@ launch_claude_custom() {
         echo "🚀 Running: claude $custom_args"
         sleep 1
 
-        # Safe execution: Use array to build command, no eval
-        local claude_path
-        claude_path="$(which claude)"
-
         # Execute with proper quoting - shell will handle argument parsing safely
         # shellcheck disable=SC2086
-        exec node "$claude_path" $custom_args
+        exec claude $custom_args
     fi
 }
 

@@ -1,5 +1,61 @@
 # Changelog
 
+## 1.6.0
+
+### 🔄 Changed
+- **Native Claude Code Installation**: Switched from npm package to official native installer
+  - Uses `curl -fsSL https://claude.ai/install.sh | bash` instead of `npm install -g @anthropic-ai/claude-code`
+  - Native binary provides automatic background updates from Anthropic
+  - Faster startup (no Node.js interpreter overhead)
+  - Claude binary symlinked to `/usr/local/bin/claude` for easy access
+- **Simplified execution**: All scripts now call `claude` directly instead of `node $(which claude)`
+- **Cleaner Dockerfile**: Removed npm retry/timeout configuration (no longer needed)
+
+### ✨ New Features
+- **Persistent Package Management**: Install APK and pip packages that survive container restarts
+  - New `persist-install` command for installing packages from the terminal
+  - Configuration options: `persistent_apk_packages` and `persistent_pip_packages`
+  - Packages installed via command or config are automatically reinstalled on startup
+  - Supports both Home Assistant add-on config and local state file
+
+### 🐛 Bug Fixes
+- **Fixed auto-resume session detection**: Improved detection of existing Claude sessions
+  - Now properly checks `.claude` directory and Claude home for session data
+  - Fixed issue where "No existing sessions found" was always displayed
+- **PEP-0668 compatibility**: Added `--break-system-packages` flag for pip installs
+  - Required for Python 3.11+ compatibility on Alpine/Debian
+  - Safe in isolated container context
+
+### 📦 Usage Examples
+```bash
+# Install APK packages persistently
+persist-install apk vim htop
+
+# Install pip packages persistently
+persist-install pip requests pandas numpy
+
+# List all persistent packages
+persist-install list
+
+# Remove from persistence (package remains until restart)
+persist-install remove apk vim
+```
+
+### 🛠️ Configuration
+Add to your add-on config to auto-install packages:
+```yaml
+persistent_apk_packages:
+  - vim
+  - htop
+persistent_pip_packages:
+  - requests
+  - pandas
+```
+
+### 📦 Notes
+- Node.js and npm remain available as development tools
+- Existing authentication and configuration files are unaffected
+
 ## 1.5.0
 
 ### ✨ New Features
