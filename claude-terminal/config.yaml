@@ -1,7 +1,7 @@
 ---
 name: "Claude Terminal"
-description: "Terminal interface for Anthropic's Claude Code CLI with persistent auth"
-version: "1.5.1"
+description: "Terminal interface for Anthropic's Claude Code CLI with persistent auth and packages"
+version: "1.6.0"
 slug: "claude_terminal"
 init: false
 
@@ -31,9 +31,15 @@ ports_description:
 options:
   auto_launch_claude: true
   auto_resume_session: true
+  persistent_apk_packages: []
+  persistent_pip_packages: []
 schema:
   auto_launch_claude: bool?
   auto_resume_session: bool?
+  persistent_apk_packages:
+    - str
+  persistent_pip_packages:
+    - str
 
 # Volume mappings for file access
 # Security: Consider using config:ro (read-only) if Claude doesn't need to modify HA configs

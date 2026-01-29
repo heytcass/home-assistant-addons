@@ -129,6 +129,84 @@ install_tools() {
     bashio::log.info "Tools installed successfully"
 }
 
+# Install persistent packages from config and saved state
+install_persistent_packages() {
+    bashio::log.info "Checking for persistent packages..."
+
+    local persist_config="/data/persistent-packages.json"
+    local apk_packages=""
+    local pip_packages=""
+
+    # Collect APK packages from Home Assistant config
+    if bashio::config.has_value 'persistent_apk_packages'; then
+        local config_apk
+        config_apk=$(bashio::config 'persistent_apk_packages')
+        if [ -n "$config_apk" ] && [ "$config_apk" != "null" ]; then
+            apk_packages="$config_apk"
+            bashio::log.info "Found APK packages in config: $apk_packages"
+        fi
+    fi
+
+    # Collect pip packages from Home Assistant config
+    if bashio::config.has_value 'persistent_pip_packages'; then
+        local config_pip
+        config_pip=$(bashio::config 'persistent_pip_packages')
+        if [ -n "$config_pip" ] && [ "$config_pip" != "null" ]; then
+            pip_packages="$config_pip"
+            bashio::log.info "Found pip packages in config: $pip_packages"
+        fi
+    fi
+
+    # Also check local persist-install config file
+    if [ -f "$persist_config" ]; then
+        bashio::log.info "Found local persistent packages config"
+
+        # Get APK packages from local config
+        local local_apk
+        local_apk=$(jq -r '.apk_packages | join(" ")' "$persist_config" 2>/dev/null || echo "")
+        if [ -n "$local_apk" ]; then
+            apk_packages="$apk_packages $local_apk"
+        fi
+
+        # Get pip packages from local config
+        local local_pip
+        local_pip=$(jq -r '.pip_packages | join(" ")' "$persist_config" 2>/dev/null || echo "")
+        if [ -n "$local_pip" ]; then
+            pip_packages="$pip_packages $local_pip"
+        fi
+    fi
+
+    # Trim whitespace and remove duplicates
+    apk_packages=$(echo "$apk_packages" | tr ' ' '\n' | sort -u | tr '\n' ' ' | xargs)
+    pip_packages=$(echo "$pip_packages" | tr ' ' '\n' | sort -u | tr '\n' ' ' | xargs)
+
+    # Install APK packages
+    if [ -n "$apk_packages" ]; then
+        bashio::log.info "Installing persistent APK packages: $apk_packages"
+        # shellcheck disable=SC2086
+        if apk add --no-cache $apk_packages; then
+            bashio::log.info "APK packages installed successfully"
+        else
+            bashio::log.warning "Some APK packages failed to install"
+        fi
+    fi
+
+    # Install pip packages (with --break-system-packages for PEP-0668 compatibility)
+    if [ -n "$pip_packages" ]; then
+        bashio::log.info "Installing persistent pip packages: $pip_packages"
+        # shellcheck disable=SC2086
+        if pip3 install --break-system-packages --no-cache-dir $pip_packages; then
+            bashio::log.info "pip packages installed successfully"
+        else
+            bashio::log.warning "Some pip packages failed to install"
+        fi
+    fi
+
+    if [ -z "$apk_packages" ] && [ -z "$pip_packages" ]; then
+        bashio::log.info "No persistent packages configured"
+    fi
+}
+
 # Setup session picker script
 setup_session_picker() {
     # Copy session picker script from built-in location
@@ -158,6 +236,16 @@ setup_session_picker() {
         chmod +x /opt/scripts/claude-auth-helper.sh
         bashio::log.info "Authentication helper script ready"
     fi
+
+    # Setup persist-install script if it exists
+    if [ -f "/opt/scripts/persist-install.sh" ]; then
+        if ! cp /opt/scripts/persist-install.sh /usr/local/bin/persist-install; then
+            bashio::log.warning "Failed to copy persist-install script"
+        else
+            chmod +x /usr/local/bin/persist-install
+            bashio::log.info "Persist-install script installed successfully"
+        fi
+    fi
 }
 
 # Legacy monitoring functions removed - using simplified /data approach
@@ -180,11 +268,11 @@ get_claude_launch_command() {
             else
                 # Fallback: start new session if smart resume not available
                 bashio::log.warning "Smart resume script not found, starting new session"
-                echo "clear && echo 'Welcome to Claude Terminal!' && echo '' && echo 'Starting Claude...' && sleep 1 && node \$(which claude)"
+                echo "clear && echo 'Welcome to Claude Terminal!' && echo '' && echo 'Starting Claude...' && sleep 1 && claude"
             fi
         else
             # Original behavior: auto-launch new Claude session
-            echo "clear && echo 'Welcome to Claude Terminal!' && echo '' && echo 'Starting Claude...' && sleep 1 && node \$(which claude)"
+            echo "clear && echo 'Welcome to Claude Terminal!' && echo '' && echo 'Starting Claude...' && sleep 1 && claude"
         fi
     else
         # Show interactive session picker
@@ -196,7 +284,7 @@ get_claude_launch_command() {
             if [ "$auto_resume_session" = "true" ] && [ -f /usr/local/bin/claude-smart-resume ]; then
                 echo "clear && echo 'Welcome to Claude Terminal!' && echo '' && /usr/local/bin/claude-smart-resume"
             else
-                echo "clear && echo 'Welcome to Claude Terminal!' && echo '' && echo 'Starting Claude...' && sleep 1 && node \$(which claude)"
+                echo "clear && echo 'Welcome to Claude Terminal!' && echo '' && echo 'Starting Claude...' && sleep 1 && claude"
             fi
         fi
     fi
@@ -260,6 +348,7 @@ main() {
     init_environment
     install_tools
     setup_session_picker
+    install_persistent_packages
     start_web_terminal
 }
 
