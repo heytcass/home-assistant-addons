@@ -1,7 +1,7 @@
 ---
 name: "Claude Terminal"
 description: "Terminal interface for Anthropic's Claude Code CLI with persistent auth and packages"
-version: "1.6.1"
+version: "1.7.0"
 slug: "claude_terminal"
 init: false
 
@@ -24,20 +24,26 @@ panel_admin: true
 # Port configuration
 ports:
   7681/tcp: 7681
+  7682/tcp: 7682
 ports_description:
   7681/tcp: "Web terminal (not required for ingress)"
+  7682/tcp: "Claude API endpoint (optional, not exposed by default)"
 
 # Add-on configuration options
 options:
   auto_launch_claude: true
   persistent_apk_packages: []
   persistent_pip_packages: []
+  api_enabled: true
+  api_timeout: 300
 schema:
   auto_launch_claude: bool?
   persistent_apk_packages:
     - str
   persistent_pip_packages:
     - str
+  api_enabled: bool?
+  api_timeout: int?
 
 # Volume mappings for file access
 map:

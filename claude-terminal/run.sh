@@ -217,6 +217,35 @@ setup_session_picker() {
 
 # Legacy monitoring functions removed - using simplified /data approach
 
+# Start Claude API server in background
+start_api_server() {
+    local api_enabled
+    api_enabled=$(bashio::config 'api_enabled' 'true')
+
+    if [ "$api_enabled" = "false" ]; then
+        bashio::log.info "API server disabled by configuration"
+        return 0
+    fi
+
+    bashio::log.info "Starting Claude API server on port 7682..."
+
+    # Start in background with logs to persistent location
+    python3 /opt/scripts/claude-api-server.py > /data/api-server.log 2>&1 &
+    API_PID=$!
+
+    # Wait for startup
+    sleep 2
+
+    # Verify running
+    if kill -0 $API_PID 2>/dev/null; then
+        bashio::log.info "API server started successfully (PID: $API_PID)"
+        bashio::log.info "API available at http://localhost:7682/api/health"
+    else
+        bashio::log.warning "API server failed to start"
+        bashio::log.warning "Check logs at /data/api-server.log"
+    fi
+}
+
 # Determine Claude launch command based on configuration
 get_claude_launch_command() {
     local auto_launch_claude
@@ -296,6 +325,7 @@ main() {
     install_tools
     setup_session_picker
     install_persistent_packages
+    start_api_server
     start_web_terminal
 }
 

@@ -21,6 +21,7 @@ A web-based terminal interface with Claude Code CLI pre-installed. This add-on p
 Features:
 - Web terminal access through your Home Assistant UI
 - Pre-installed Claude Code CLI that launches automatically
+- HTTP API for programmatic access from automations
 - Direct access to your Home Assistant config directory
 - No configuration needed (uses OAuth)
 - Access to Claude's complete capabilities including:
