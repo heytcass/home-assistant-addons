@@ -19,6 +19,7 @@ RUN apk add --no-cache \
     wget \
     jq \
     tree \
+    tmux \
     yq
 
 # Install Claude Code CLI using native installer
