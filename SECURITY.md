@@ -175,8 +175,7 @@ ttyd binds to `0.0.0.0:7681` for Home Assistant ingress compatibility. Access is
 ## Reporting Security Issues
 
 If you discover a security vulnerability, please report it via:
-- GitHub Security Advisories (preferred)
-- Email: [maintainer email]
+- GitHub Security Advisories (preferred): https://github.com/Arborist-ai/HA-LCASS/security/advisories
 
 **Do not** open public issues for security vulnerabilities.
 
@@ -195,7 +194,14 @@ Before deploying to production:
 
 ## Version History
 
-### v1.5.0 - Current Release
+### v1.6.0 - Current Release
+- Native Claude Code installation using official installer
+- Persistent package management (APK and pip)
+- Fixed auto-resume session detection
+- PEP-0668 compatibility for Python 3.11+
+- All security fixes from v1.4.2 maintained
+
+### v1.5.0
 - Auto-resume session functionality
 - Git integration for version control
 - Enhanced user experience

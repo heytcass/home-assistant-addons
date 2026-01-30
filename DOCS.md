@@ -21,6 +21,21 @@ The add-on works out of the box with sensible defaults. Optional configuration:
 
 - **auto_launch_claude** (default: `true`): Automatically launch Claude when opening the terminal
 - **auto_resume_session** (default: `true`): Automatically resume your most recent conversation
+- **persistent_apk_packages** (default: `[]`): List of APK packages to install on startup that persist across restarts
+- **persistent_pip_packages** (default: `[]`): List of pip packages to install on startup that persist across restarts
+
+### Example Configuration
+```yaml
+auto_launch_claude: true
+auto_resume_session: true
+persistent_apk_packages:
+  - vim
+  - htop
+  - rsync
+persistent_pip_packages:
+  - requests
+  - pandas
+```
 
 The add-on uses OAuth authentication, so you'll be prompted to log in to your Anthropic account the first time you use it.
 

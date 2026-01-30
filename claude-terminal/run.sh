@@ -314,7 +314,7 @@ start_web_terminal() {
     bashio::log.info "Auto-resume session: ${auto_resume_session}"
     
     # Run ttyd with keepalive configuration to prevent WebSocket disconnects
-    # See: https://github.com/heytcass/home-assistant-addons/issues/24
+    # See: https://github.com/Arborist-ai/HA-LCASS/issues/24
     # Security Note: Binds to 0.0.0.0 for Home Assistant ingress compatibility.
     # Access is controlled by Home Assistant authentication (panel_admin: true).
     # For production, remove direct port exposure in config.yaml - use ingress only.
