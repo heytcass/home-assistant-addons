@@ -38,9 +38,16 @@ init_environment() {
     # Migrate any existing authentication files from legacy locations
     migrate_legacy_auth_files "$claude_config_dir"
 
+    # Install tmux configuration to user home directory
+    if [ -f "/opt/scripts/tmux.conf" ]; then
+        cp /opt/scripts/tmux.conf "$data_home/.tmux.conf"
+        chmod 644 "$data_home/.tmux.conf"
+        bashio::log.info "tmux configuration installed to $data_home/.tmux.conf"
+    fi
+
     bashio::log.info "Environment initialized:"
     bashio::log.info "  - Home: $HOME"
-    bashio::log.info "  - Config: $XDG_CONFIG_HOME" 
+    bashio::log.info "  - Config: $XDG_CONFIG_HOME"
     bashio::log.info "  - Claude config: $ANTHROPIC_CONFIG_DIR"
     bashio::log.info "  - Cache: $XDG_CACHE_HOME"
 }
@@ -252,6 +259,10 @@ start_web_terminal() {
     auto_launch_claude=$(bashio::config 'auto_launch_claude' 'true')
     bashio::log.info "Auto-launch Claude: ${auto_launch_claude}"
     
+    # Set TTYD environment variable for tmux configuration
+    # This disables tmux mouse mode since ttyd has better mouse handling for web terminals
+    export TTYD=1
+
     # Run ttyd with keepalive configuration to prevent WebSocket disconnects
     # See: https://github.com/heytcass/home-assistant-addons/issues/24
     exec ttyd \
