@@ -139,29 +139,29 @@ launch_claude_yolo() {
         yolo_choice=1
     fi
 
-    # Set sandbox environment variable
-    export IS_SANDBOX=1
+    # Validate choice - return to main menu on invalid input (safety measure for dangerous mode)
+    if [ "$yolo_choice" != "1" ] && [ "$yolo_choice" != "2" ] && [ "$yolo_choice" != "3" ]; then
+        echo "❌ Invalid choice. Returning to main menu..."
+        sleep 2
+        return
+    fi
 
+    # Launch Claude with IS_SANDBOX scoped to the command (not exported globally)
     case "$yolo_choice" in
         1)
             echo "🚀 Starting new YOLO session..."
             sleep 1
-            exec claude --dangerously-skip-permissions
+            IS_SANDBOX=1 exec claude --dangerously-skip-permissions
             ;;
         2)
             echo "⏩ Continuing most recent conversation in YOLO mode..."
             sleep 1
-            exec claude -c --dangerously-skip-permissions
+            IS_SANDBOX=1 exec claude -c --dangerously-skip-permissions
             ;;
         3)
             echo "📋 Opening conversation list for YOLO mode..."
             sleep 1
-            exec claude -r --dangerously-skip-permissions
-            ;;
-        *)
-            echo "❌ Invalid choice. Starting new YOLO session..."
-            sleep 1
-            exec claude --dangerously-skip-permissions
+            IS_SANDBOX=1 exec claude -r --dangerously-skip-permissions
             ;;
     esac
 }
