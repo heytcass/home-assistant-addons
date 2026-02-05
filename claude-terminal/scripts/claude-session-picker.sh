@@ -98,6 +98,21 @@ exit_session_picker() {
 }
 
 launch_claude_yolo() {
+    # Pre-flight check: verify Claude binary is available before showing prompts
+    if ! command -v claude >/dev/null 2>&1; then
+        echo "YOLO Mode: Claude binary not found" >&2
+        clear
+        echo "❌ Error: Claude binary not found"
+        echo ""
+        echo "The Claude CLI is not installed or not in your PATH."
+        echo ""
+        echo "Try running option 5 (Authentication helper) to set up Claude."
+        echo ""
+        printf "Press Enter to return to menu..." >&2
+        read -r
+        return
+    fi
+
     clear
     echo "╔══════════════════════════════════════════════════════════════╗"
     echo "║                    ⚠️  YOLO MODE WARNING ⚠️                    ║"
@@ -139,14 +154,21 @@ launch_claude_yolo() {
         yolo_choice=1
     fi
 
-    # Validate choice - return to main menu on invalid input (safety measure for dangerous mode)
+    # Validate choice - return to main menu on invalid input to ensure users
+    # get exactly the session type they requested rather than silently defaulting.
     if [ "$yolo_choice" != "1" ] && [ "$yolo_choice" != "2" ] && [ "$yolo_choice" != "3" ]; then
-        echo "❌ Invalid choice. Returning to main menu..."
-        sleep 2
+        echo "YOLO Mode: Invalid session type choice: '$yolo_choice' (expected 1-3)" >&2
+        echo ""
+        echo "❌ Invalid choice: '$yolo_choice'"
+        echo "   Valid options are 1 (New), 2 (Continue), or 3 (Resume)"
+        echo ""
+        printf "Press Enter to return to menu..." >&2
+        read -r
         return
     fi
 
-    # Launch Claude with IS_SANDBOX scoped to the command (not exported globally)
+    # Launch Claude with IS_SANDBOX scoped to the command (not exported globally).
+    # exec replaces this process; if exec fails, the lines after it run as a fallback.
     case "$yolo_choice" in
         1)
             echo "🚀 Starting new YOLO session..."
@@ -164,6 +186,14 @@ launch_claude_yolo() {
             IS_SANDBOX=1 exec claude -r --dangerously-skip-permissions
             ;;
     esac
+
+    # If we reach here, exec failed
+    echo "YOLO Mode: Failed to launch Claude" >&2
+    echo ""
+    echo "❌ Failed to launch Claude. Check that the CLI is installed correctly."
+    echo ""
+    printf "Press Enter to return to menu..." >&2
+    read -r
 }
 
 # Main execution flow
