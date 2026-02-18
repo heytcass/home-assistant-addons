@@ -1,5 +1,32 @@
 # Changelog
 
+## 1.7.0
+
+### ✨ New Features
+- **Session Persistence with tmux** (#46): Claude sessions now survive browser navigation
+  - Sessions persist when navigating away from the terminal in Home Assistant
+  - New "Reconnect to existing session" option in session picker (option 0)
+  - Seamless session resumption - conversations continue exactly where you left off
+  - tmux integration provides robust session management
+  - Contributed by [@petterl](https://github.com/petterl)
+
+### 🛠️ Technical Details
+- Added tmux package to container
+- Custom tmux configuration optimized for web terminals:
+  - Mouse mode intelligently disabled when using ttyd (prevents conflicts)
+  - OSC 52 clipboard support for copy/paste to browser
+  - 50,000 line history buffer for extensive scrollback
+  - Vi-style keybindings in copy mode
+  - Visual improvements with better status bar
+- Session picker enhanced with reconnection logic
+- Automatic session cleanup and management
+
+### 🎯 User Experience
+- No more lost work when switching between Home Assistant pages
+- Browser refresh no longer interrupts Claude conversations
+- Tab switching preserves full session state including history
+- Improved reliability for long-running Claude sessions
+
 ## 1.6.1
 
 ### 🐛 Bug Fix - Native Install Path Mismatch
