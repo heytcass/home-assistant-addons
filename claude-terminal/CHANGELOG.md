@@ -23,7 +23,7 @@ enable_ha_mcp: true  # default
 ```
 
 ### 📦 Technical Details
-- Uses `uvx ha-mcp` for automatic package management and Python version handling
+- Uses `uvx ha-mcp@3.5.1` for automatic package management and Python version handling
 - Installed [uv](https://github.com/astral-sh/uv) for fast Python package execution
 - MCP server connects to Home Assistant via internal Supervisor API (`http://supervisor/core`)
 - Authentication uses the add-on's Supervisor token automatically

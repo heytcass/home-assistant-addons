@@ -83,6 +83,10 @@ The integration provides 97+ tools for:
 - Device registry access
 - And much more
 
+### Security Note
+
+The ha-mcp integration gives Claude extensive control over your Home Assistant instance, including the ability to control devices, modify automations, and access history data. Only enable this if you understand and accept these capabilities. You can disable it at any time by setting `enable_ha_mcp: false` in the add-on configuration.
+
 ### Disabling the Integration
 
 If you don't want the Home Assistant MCP integration, you can disable it in the add-on configuration:
