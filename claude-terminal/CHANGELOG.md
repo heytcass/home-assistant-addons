@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.6.1
+
+### 🐛 Bug Fix - Native Install Path Mismatch
+- **Fixed "installMethod is native, but directory does not exist" error**: Claude binary now available at `$HOME/.local/bin/claude` at runtime
+  - **Root cause**: Native installer places Claude at `/root/.local/bin/claude` during Docker build, but at runtime `HOME=/data/home`, so Claude's self-check looks in `/data/home/.local/bin/claude` which didn't exist
+  - **Solution**: Symlink created from `/data/home/.local/bin/claude` → `/root/.local/bin/claude` on startup
+  - **Result**: Claude native binary resolves correctly regardless of HOME directory change
+  - Ref: [ESJavadex/claude-code-ha#3](https://github.com/ESJavadex/claude-code-ha/issues/3)
+
 ## 1.6.0 - 2026-01-26
 
 ### 🔄 Changed
