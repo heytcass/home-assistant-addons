@@ -45,13 +45,13 @@ configure_ha_mcp_server() {
     if claude mcp add home-assistant \
         --env "HOMEASSISTANT_URL=http://supervisor/core" \
         --env "HOMEASSISTANT_TOKEN=${SUPERVISOR_TOKEN}" \
-        -- uvx ha-mcp@latest; then
+        -- uvx ha-mcp@3.5.1; then
         bashio::log.info "ha-mcp configured successfully!"
         bashio::log.info "Claude Code now has access to Home Assistant via MCP"
         bashio::log.info "Available tools: entity control, automations, scripts, history, and more"
     else
         bashio::log.warning "Failed to configure ha-mcp - continuing without MCP integration"
-        bashio::log.warning "You can manually run: claude mcp add home-assistant --env HOMEASSISTANT_URL=http://supervisor/core --env HOMEASSISTANT_TOKEN=\$SUPERVISOR_TOKEN -- uvx ha-mcp@latest"
+        bashio::log.warning "You can manually run: claude mcp add home-assistant --env HOMEASSISTANT_URL=http://supervisor/core --env HOMEASSISTANT_TOKEN=\$SUPERVISOR_TOKEN -- uvx ha-mcp@3.5.1"
     fi
 }
 
