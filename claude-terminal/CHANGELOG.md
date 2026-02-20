@@ -1,5 +1,41 @@
 # Changelog
 
+## 1.7.0
+
+### ✨ New Features
+- **Session Persistence with tmux** (#46): Claude sessions now survive browser navigation
+  - Sessions persist when navigating away from the terminal in Home Assistant
+  - New "Reconnect to existing session" option in session picker (option 0)
+  - Seamless session resumption - conversations continue exactly where you left off
+  - tmux integration provides robust session management
+  - Contributed by [@petterl](https://github.com/petterl)
+
+### 🛠️ Technical Details
+- Added tmux package to container
+- Custom tmux configuration optimized for web terminals:
+  - Mouse mode intelligently disabled when using ttyd (prevents conflicts)
+  - OSC 52 clipboard support for copy/paste to browser
+  - 50,000 line history buffer for extensive scrollback
+  - Vi-style keybindings in copy mode
+  - Visual improvements with better status bar
+- Session picker enhanced with reconnection logic
+- Automatic session cleanup and management
+
+### 🎯 User Experience
+- No more lost work when switching between Home Assistant pages
+- Browser refresh no longer interrupts Claude conversations
+- Tab switching preserves full session state including history
+- Improved reliability for long-running Claude sessions
+
+## 1.6.1
+
+### 🐛 Bug Fix - Native Install Path Mismatch
+- **Fixed "installMethod is native, but directory does not exist" error**: Claude binary now available at `$HOME/.local/bin/claude` at runtime
+  - **Root cause**: Native installer places Claude at `/root/.local/bin/claude` during Docker build, but at runtime `HOME=/data/home`, so Claude's self-check looks in `/data/home/.local/bin/claude` which didn't exist
+  - **Solution**: Symlink created from `/data/home/.local/bin/claude` → `/root/.local/bin/claude` on startup
+  - **Result**: Claude native binary resolves correctly regardless of HOME directory change
+  - Ref: [ESJavadex/claude-code-ha#3](https://github.com/ESJavadex/claude-code-ha/issues/3)
+
 ## 1.6.0 - 2026-01-26
 
 ### 🔄 Changed

@@ -24,6 +24,18 @@ init_environment() {
     # Set permissions
     chmod 755 "$data_home" "$config_dir" "$cache_dir" "$state_dir" "$claude_config_dir"
 
+    # Ensure Claude native binary is available at $HOME/.local/bin/claude
+    # The native installer places it at /root/.local/bin/claude during Docker build,
+    # but at runtime HOME=/data/home, so Claude's self-check looks in /data/home/.local/bin/
+    local native_bin_dir="$data_home/.local/bin"
+    if [ ! -d "$native_bin_dir" ]; then
+        mkdir -p "$native_bin_dir"
+    fi
+    if [ -f /root/.local/bin/claude ] && [ ! -f "$native_bin_dir/claude" ]; then
+        ln -sf /root/.local/bin/claude "$native_bin_dir/claude"
+        bashio::log.info "  - Claude native binary linked: $native_bin_dir/claude"
+    fi
+
     # Set XDG and application environment variables
     export HOME="$data_home"
     export XDG_CONFIG_HOME="$config_dir"
@@ -47,9 +59,16 @@ init_environment() {
     # Migrate any existing authentication files from legacy locations
     migrate_legacy_auth_files "$claude_config_dir"
 
+    # Install tmux configuration to user home directory
+    if [ -f "/opt/scripts/tmux.conf" ]; then
+        cp /opt/scripts/tmux.conf "$data_home/.tmux.conf"
+        chmod 644 "$data_home/.tmux.conf"
+        bashio::log.info "tmux configuration installed to $data_home/.tmux.conf"
+    fi
+
     bashio::log.info "Environment initialized:"
     bashio::log.info "  - Home: $HOME"
-    bashio::log.info "  - Config: $XDG_CONFIG_HOME" 
+    bashio::log.info "  - Config: $XDG_CONFIG_HOME"
     bashio::log.info "  - Claude config: $ANTHROPIC_CONFIG_DIR"
     bashio::log.info "  - Cache: $XDG_CACHE_HOME"
 }
@@ -101,7 +120,7 @@ migrate_legacy_auth_files() {
 # Install required tools
 install_tools() {
     bashio::log.info "Installing additional tools..."
-    if ! apk add --no-cache ttyd jq curl; then
+    if ! apk add --no-cache ttyd jq curl tmux; then
         bashio::log.error "Failed to install required tools"
         exit 1
     fi
@@ -227,30 +246,20 @@ get_claude_launch_command() {
 
     # Get configuration values
     auto_launch_claude=$(bashio::config 'auto_launch_claude' 'true')
-    dangerously_skip_permissions=$(bashio::config 'dangerously_skip_permissions' 'false')
-
-    if [ "$dangerously_skip_permissions" = "true" ]; then
-        claude_flags="--dangerously-skip-permissions"
-        bashio::log.warning "Claude dangerous mode enabled from add-on config"
-    fi
-
-    if [ "$auto_launch_claude" = "true" ]; then
-        # Original behavior: auto-launch Claude directly
-        if [ -n "$claude_flags" ]; then
-            echo "clear && echo 'Welcome to Claude Terminal!' && echo '' && echo 'Starting Claude...' && sleep 1 && claude $claude_flags"
-        else
-            echo "clear && echo 'Welcome to Claude Terminal!' && echo '' && echo 'Starting Claude...' && sleep 1 && claude"
-        fi
-    else
-        # New behavior: show interactive session picker
-        if [ -f /usr/local/bin/claude-session-picker ]; then
-            echo "clear && /usr/local/bin/claude-session-picker"
-        else
-            # Fallback if session picker is missing
-            bashio::log.warning "Session picker not found, falling back to auto-launch"
-            echo "clear && echo 'Welcome to Claude Terminal!' && echo '' && echo 'Starting Claude...' && sleep 1 && claude"
-        fi
-    fi
+    
+    if [ "$auto_launch_claude" = "true" ]; then                                                                 
+        # Use tmux for session persistence - attach to existing or create new                                   
+        echo "tmux new-session -A -s claude 'claude'"                                                           
+    else                                                                                                        
+        # New behavior: show interactive session picker (also with tmux persistence)                            
+        if [ -f /usr/local/bin/claude-session-picker ]; then                                                    
+            echo "tmux new-session -A -s claude-picker '/usr/local/bin/claude-session-picker'"                  
+        else                                                                                                    
+            # Fallback if session picker is missing                                                             
+            bashio::log.warning "Session picker not found, falling back to auto-launch"                         
+            echo "tmux new-session -A -s claude 'claude'"                                                       
+        fi                                                                                                      
+    fi                 
 }
 
 
@@ -273,6 +282,10 @@ start_web_terminal() {
     auto_launch_claude=$(bashio::config 'auto_launch_claude' 'true')
     bashio::log.info "Auto-launch Claude: ${auto_launch_claude}"
     
+    # Set TTYD environment variable for tmux configuration
+    # This disables tmux mouse mode since ttyd has better mouse handling for web terminals
+    export TTYD=1
+
     # Run ttyd with keepalive configuration to prevent WebSocket disconnects
     # See: https://github.com/heytcass/home-assistant-addons/issues/24
     exec ttyd \
