@@ -24,7 +24,7 @@ show_menu() {
     echo "  7) ❌ Exit"
     echo ""
     echo "  ─────────────────────────────────────"
-    echo "  8) ⚠️  YOLO Mode (skip all permissions)"
+    echo "  8) ☢️  Dangerous Mode (YOLO - skip all permissions)"
 }
 
 get_user_choice() {
@@ -115,18 +115,32 @@ launch_claude_yolo() {
 
     clear
     echo "╔══════════════════════════════════════════════════════════════╗"
-    echo "║                    ⚠️  YOLO MODE WARNING ⚠️                    ║"
+    echo "║               ☢️  DANGEROUS MODE WARNING (YOLO) ☢️            ║"
     echo "╚══════════════════════════════════════════════════════════════╝"
     echo ""
     echo "You are about to launch Claude with --dangerously-skip-permissions"
     echo ""
-    echo "This mode will:"
-    echo "  • Skip ALL permission prompts automatically"
-    echo "  • Allow Claude to execute ANY command without confirmation"
-    echo "  • Allow Claude to read/write ANY file without asking"
-    echo "  • Allow Claude to make network requests freely"
+    if [ "${ALLOW_YOLO_MODE:-0}" != "1" ]; then
+        echo "❌ YOLO mode is disabled by default for safety"
+        echo ""
+        echo "To enable it explicitly, set: ALLOW_YOLO_MODE=1"
+        echo "(e.g. in add-on configuration/environment)"
+        echo ""
+        printf "Press Enter to return to menu..." >&2
+        read -r
+        return
+    fi
+    echo "⚠️  THIS IS EXTREMELY DANGEROUS! ⚠️"
     echo ""
-    echo "⚠️  THIS IS DANGEROUS! Only use if you understand the risks."
+    echo "Dangerous (YOLO) mode allows Claude to:"
+    echo "  • DELETE your Home Assistant configuration"
+    echo "  • EXPOSE credentials, API keys, and tokens"
+    echo "  • MODIFY or DELETE automations without asking"
+    echo "  • EXECUTE destructive system commands"
+    echo "  • ACCESS and TRANSMIT sensitive data"
+    echo ""
+    echo "🚨 ONLY use this in isolated test environments!"
+    echo "🚨 NEVER use this on production Home Assistant!"
     echo ""
     printf "Type 'YOLO' to confirm (or anything else to cancel): "
     read -r confirmation
