@@ -12,6 +12,10 @@ show_banner() {
     echo ""
 }
 
+is_yolo_enabled() {
+    [ "${ALLOW_YOLO_MODE:-0}" = "1" ]
+}
+
 show_menu() {
     echo "Choose your Claude session type:"
     echo ""
@@ -24,13 +28,19 @@ show_menu() {
     echo "  7) ❌ Exit"
     echo ""
     echo "  ─────────────────────────────────────"
-    echo "  8) ☢️  Dangerous Mode (YOLO - skip all permissions)"
+    if is_yolo_enabled; then
+        echo "  8) ☢️  Dangerous Mode (YOLO - skip all permissions)"
+    fi
 }
 
 get_user_choice() {
     local choice
     # Send prompt to stderr to avoid capturing it with the return value
-    printf "Enter your choice [1-8] (default: 1): " >&2
+    local max_choice="7"
+    if is_yolo_enabled; then
+        max_choice="8"
+    fi
+    printf "Enter your choice [1-%s] (default: 1): " "$max_choice" >&2
     read -r choice
     
     # Default to 1 if empty
@@ -118,9 +128,7 @@ launch_claude_yolo() {
     echo "║               ☢️  DANGEROUS MODE WARNING (YOLO) ☢️            ║"
     echo "╚══════════════════════════════════════════════════════════════╝"
     echo ""
-    echo "You are about to launch Claude with --dangerously-skip-permissions"
-    echo ""
-    if [ "${ALLOW_YOLO_MODE:-0}" != "1" ]; then
+    if ! is_yolo_enabled; then
         echo "❌ YOLO mode is disabled by default for safety"
         echo ""
         echo "To enable it explicitly, set: ALLOW_YOLO_MODE=1"
@@ -130,6 +138,9 @@ launch_claude_yolo() {
         read -r
         return
     fi
+
+    echo "You are about to launch Claude with --dangerously-skip-permissions"
+    echo ""
     echo "⚠️  THIS IS EXTREMELY DANGEROUS! ⚠️"
     echo ""
     echo "Dangerous (YOLO) mode allows Claude to:"
@@ -240,12 +251,24 @@ main() {
                 exit_session_picker
                 ;;
             8)
-                launch_claude_yolo
+                if is_yolo_enabled; then
+                    launch_claude_yolo
+                else
+                    echo ""
+                    echo "❌ Dangerous mode is disabled (set ALLOW_YOLO_MODE=1 to enable)."
+                    echo ""
+                    printf "Press Enter to continue..." >&2
+                    read -r
+                fi
                 ;;
             *)
                 echo ""
                 echo "❌ Invalid choice: '$choice'"
-                echo "Please select a number between 1-8"
+                if is_yolo_enabled; then
+                    echo "Please select a number between 1-8"
+                else
+                    echo "Please select a number between 1-7"
+                fi
                 echo ""
                 printf "Press Enter to continue..." >&2
                 read -r
