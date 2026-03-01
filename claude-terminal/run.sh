@@ -111,10 +111,29 @@ migrate_legacy_auth_files() {
 # Install required tools
 install_tools() {
     bashio::log.info "Installing additional tools..."
-    if ! apk add --no-cache ttyd jq curl tmux; then
+
+    # Install packages available in Debian repos
+    if ! apt-get update || ! apt-get install -y --no-install-recommends jq curl tmux wget; then
         bashio::log.error "Failed to install required tools"
         exit 1
     fi
+    rm -rf /var/lib/apt/lists/*
+
+    # Install ttyd from GitHub releases (not in Debian repos)
+    if ! command -v ttyd &> /dev/null; then
+        bashio::log.info "Installing ttyd from GitHub releases..."
+        local arch
+        arch=$(uname -m)
+        case "$arch" in
+            x86_64) arch="x86_64" ;;
+            aarch64) arch="aarch64" ;;
+            armv7l) arch="armhf" ;;
+            *) bashio::log.error "Unsupported architecture: $arch"; exit 1 ;;
+        esac
+        wget -q "https://github.com/tsl0922/ttyd/releases/latest/download/ttyd.${arch}" -O /usr/local/bin/ttyd
+        chmod +x /usr/local/bin/ttyd
+    fi
+
     bashio::log.info "Tools installed successfully"
 }
 
@@ -126,13 +145,13 @@ install_persistent_packages() {
     local apk_packages=""
     local pip_packages=""
 
-    # Collect APK packages from Home Assistant config
+    # Collect APT packages from Home Assistant config
     if bashio::config.has_value 'persistent_apk_packages'; then
         local config_apk
         config_apk=$(bashio::config 'persistent_apk_packages')
         if [ -n "$config_apk" ] && [ "$config_apk" != "null" ]; then
             apk_packages="$config_apk"
-            bashio::log.info "Found APK packages in config: $apk_packages"
+            bashio::log.info "Found APT packages in config: $apk_packages"
         fi
     fi
 
@@ -169,14 +188,16 @@ install_persistent_packages() {
     apk_packages=$(echo "$apk_packages" | tr ' ' '\n' | sort -u | tr '\n' ' ' | xargs)
     pip_packages=$(echo "$pip_packages" | tr ' ' '\n' | sort -u | tr '\n' ' ' | xargs)
 
-    # Install APK packages
+    # Install APT packages
     if [ -n "$apk_packages" ]; then
-        bashio::log.info "Installing persistent APK packages: $apk_packages"
+        bashio::log.info "Installing persistent APT packages: $apk_packages"
         # shellcheck disable=SC2086
-        if apk add --no-cache $apk_packages; then
-            bashio::log.info "APK packages installed successfully"
+        apt-get update
+        if apt-get install -y --no-install-recommends $apk_packages; then
+            bashio::log.info "APT packages installed successfully"
+            rm -rf /var/lib/apt/lists/*
         else
-            bashio::log.warning "Some APK packages failed to install"
+            bashio::log.warning "Some APT packages failed to install"
         fi
     fi
 
