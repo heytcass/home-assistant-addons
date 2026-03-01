@@ -111,11 +111,29 @@ migrate_legacy_auth_files() {
 # Install required tools
 install_tools() {
     bashio::log.info "Installing additional tools..."
-    if ! apt-get update || ! apt-get install -y --no-install-recommends ttyd jq curl tmux; then
+
+    # Install packages available in Debian repos
+    if ! apt-get update || ! apt-get install -y --no-install-recommends jq curl tmux wget; then
         bashio::log.error "Failed to install required tools"
         exit 1
     fi
     rm -rf /var/lib/apt/lists/*
+
+    # Install ttyd from GitHub releases (not in Debian repos)
+    if ! command -v ttyd &> /dev/null; then
+        bashio::log.info "Installing ttyd from GitHub releases..."
+        local arch
+        arch=$(uname -m)
+        case "$arch" in
+            x86_64) arch="x86_64" ;;
+            aarch64) arch="aarch64" ;;
+            armv7l) arch="armhf" ;;
+            *) bashio::log.error "Unsupported architecture: $arch"; exit 1 ;;
+        esac
+        wget -q "https://github.com/tsl0922/ttyd/releases/latest/download/ttyd.${arch}" -O /usr/local/bin/ttyd
+        chmod +x /usr/local/bin/ttyd
+    fi
+
     bashio::log.info "Tools installed successfully"
 }
 
