@@ -24,8 +24,7 @@ RUN apk add --no-cache \
 
 # Install Claude Code CLI using native installer
 # The installer places the binary in ~/.local/bin
-RUN curl -fsSL https://claude.ai/install.sh | bash \
-    && ln -sf /root/.local/bin/claude /usr/local/bin/claude
+RUN npm install -g @anthropic-ai/claude-code
 
 # Create directory for Claude configuration and set working directory
 RUN mkdir -p /config/claude-config
