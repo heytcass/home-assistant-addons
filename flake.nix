@@ -43,7 +43,7 @@
             echo "To get started: build-addon"
             
             # Create convenience aliases
-            alias build-addon='podman build --build-arg BUILD_FROM=ghcr.io/home-assistant/amd64-base:3.19 -t local/claude-terminal ./claude-terminal'
+            alias build-addon='podman build --build-arg BUILD_FROM=ghcr.io/home-assistant/amd64-base:3.21 -t local/claude-terminal ./claude-terminal'
             alias run-addon='podman run -p 7681:7681 -v $(pwd)/config:/config local/claude-terminal'
             alias validate-addon='echo "Note: Home Assistant builder validation requires HA OS environment"'
             alias lint-dockerfile='hadolint ./claude-terminal/Dockerfile'

@@ -26,7 +26,7 @@ direnv allow
 ### Manual Commands (without aliases)
 ```bash
 # Build
-podman build --build-arg BUILD_FROM=ghcr.io/home-assistant/amd64-base:3.19 -t local/claude-terminal ./claude-terminal
+podman build --build-arg BUILD_FROM=ghcr.io/home-assistant/amd64-base:3.21 -t local/claude-terminal ./claude-terminal
 
 # Run locally
 podman run -p 7681:7681 -v $(pwd)/config:/config local/claude-terminal
@@ -75,7 +75,7 @@ For rapid development and debugging without pushing new versions:
 #### Quick Build & Test
 ```bash
 # Build test version
-podman build --build-arg BUILD_FROM=ghcr.io/home-assistant/amd64-base:3.19 -t local/claude-terminal:test ./claude-terminal
+podman build --build-arg BUILD_FROM=ghcr.io/home-assistant/amd64-base:3.21 -t local/claude-terminal:test ./claude-terminal
 
 # Create test config directory
 mkdir -p /tmp/test-config/claude-config
