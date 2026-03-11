@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.8.0
+## 1.9.0
 
 ### 🔄 Changed
 - **Reverted to npm installation**: Switched back from native installer to `npm install -g @anthropic-ai/claude-code`

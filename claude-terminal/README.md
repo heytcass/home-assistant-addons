@@ -162,7 +162,7 @@ For detailed usage instructions, see the [documentation](DOCS.md).
 
 ## Version History
 
-### v1.8.0 (Current) - npm Installation Fix
+### v1.9.0 (Current) - npm Installation Fix
 - **Reverted to npm installation**: Fixes musl binary compatibility issues on Alpine Linux
 - Native installer binary required musl 1.2.6+ which Alpine 3.21 doesn't ship
 
