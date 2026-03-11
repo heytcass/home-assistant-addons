@@ -2,9 +2,9 @@
 
 ## 1.8.0
 
-### 🔄 Breaking Change - Switched from Alpine to Ubuntu
-- **Base image changed to Ubuntu 24.04 (noble)**: Resolves incompatibility between Claude Code CLI and Alpine's musl libc
-  - Claude Code requires glibc, which is provided by Ubuntu but not Alpine (musl)
+### 🔄 Breaking Change - Switched from Alpine to Debian
+- **Base image changed to Debian 12 (bookworm)**: Resolves incompatibility between Claude Code CLI and Alpine's musl libc
+  - Claude Code requires glibc, which is provided by Debian but not Alpine (musl)
   - All three architectures updated: amd64, aarch64, armv7
 - **`persistent_apk_packages` renamed to `persistent_apt_packages`**: Update your add-on configuration if you use this option
   - `persist-install apk` command renamed to `persist-install apt`
@@ -12,7 +12,7 @@
 
 ### 🛠️ Technical Details
 - `apt-get` replaces `apk` for all package installation
-- Python packages renamed to Ubuntu conventions (e.g. `py3-pip` → `python3-pip`)
+- Python packages renamed to Debian conventions (e.g. `py3-pip` → `python3-pip`)
 - `yq` installed as a pre-built binary (mikefarah/yq) for multi-arch compatibility
 - Persistent packages JSON config key changed from `apk_packages` to `apt_packages`
 
