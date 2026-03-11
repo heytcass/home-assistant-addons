@@ -1,5 +1,36 @@
 # Changelog
 
+## 1.8.0
+
+### 🔄 Breaking Change - Switched from Alpine to Ubuntu
+- **Base image changed to Ubuntu 24.04 (noble)**: Resolves incompatibility between Claude Code CLI and Alpine's musl libc
+  - Claude Code requires glibc, which is provided by Ubuntu but not Alpine (musl)
+  - All three architectures updated: amd64, aarch64, armv7
+- **`persistent_apk_packages` renamed to `persistent_apt_packages`**: Update your add-on configuration if you use this option
+  - `persist-install apk` command renamed to `persist-install apt`
+  - All package management now uses `apt-get` instead of `apk`
+
+### 🛠️ Technical Details
+- `apt-get` replaces `apk` for all package installation
+- Python packages renamed to Ubuntu conventions (e.g. `py3-pip` → `python3-pip`)
+- `yq` installed as a pre-built binary (mikefarah/yq) for multi-arch compatibility
+- Persistent packages JSON config key changed from `apk_packages` to `apt_packages`
+
+### 📦 Migration Guide
+If you have `persistent_apk_packages` set in your add-on configuration, rename it to `persistent_apt_packages`. Package names remain the same — most Alpine package names have direct apt equivalents.
+
+```yaml
+# Before
+persistent_apk_packages:
+  - vim
+  - htop
+
+# After
+persistent_apt_packages:
+  - vim
+  - htop
+```
+
 ## 1.7.0
 
 ### ✨ New Features
