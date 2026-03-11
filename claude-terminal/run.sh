@@ -236,18 +236,19 @@ get_claude_launch_command() {
     # Get configuration value, default to true for backward compatibility
     auto_launch_claude=$(bashio::config 'auto_launch_claude' 'true')
     
-    if [ "$auto_launch_claude" = "true" ]; then                                                                 
-        # Use tmux for session persistence - attach to existing or create new                                   
-        echo "tmux new-session -A -s claude 'claude'"                                                           
-    else                                                                                                        
-        # New behavior: show interactive session picker (also with tmux persistence)                            
-        if [ -f /usr/local/bin/claude-session-picker ]; then                                                    
-            echo "tmux new-session -A -s claude-picker '/usr/local/bin/claude-session-picker'"                  
-        else                                                                                                    
-            # Fallback if session picker is missing                                                             
-            bashio::log.warning "Session picker not found, falling back to auto-launch"                         
-            echo "tmux new-session -A -s claude 'claude'"                                                       
-        fi                                                                                                      
+    if [ "$auto_launch_claude" = "true" ]; then
+        # Use tmux for session persistence - attach to existing or create new
+        echo "tmux new-session -A -s claude 'claude'"
+    else
+        # Session picker manages its own tmux sessions internally,
+        # so do NOT wrap it in tmux (that would cause nested tmux errors)
+        if [ -f /usr/local/bin/claude-session-picker ]; then
+            echo "/usr/local/bin/claude-session-picker"
+        else
+            # Fallback if session picker is missing
+            bashio::log.warning "Session picker not found, falling back to auto-launch"
+            echo "tmux new-session -A -s claude 'claude'"
+        fi
     fi                 
 }
 
