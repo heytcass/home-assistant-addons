@@ -2,25 +2,36 @@ ARG BUILD_FROM
 FROM ${BUILD_FROM}
 
 # Install system packages and development tools
-RUN apk add --no-cache \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
     curl \
     nano \
     nodejs \
     npm \
     python3 \
-    py3-pip \
-    py3-requests \
-    py3-aiohttp \
-    py3-yaml \
-    py3-beautifulsoup4 \
+    python3-pip \
+    python3-requests \
+    python3-aiohttp \
+    python3-yaml \
+    python3-bs4 \
     git \
     vim \
     wget \
     jq \
     tree \
     tmux \
-    yq
+    && rm -rf /var/lib/apt/lists/*
+
+# Install yq binary (multi-arch)
+RUN ARCH=$(dpkg --print-architecture) && \
+    case "$ARCH" in \
+        amd64) YQ_ARCH="amd64" ;; \
+        arm64) YQ_ARCH="arm64" ;; \
+        armhf) YQ_ARCH="arm" ;; \
+        *) YQ_ARCH="amd64" ;; \
+    esac && \
+    curl -Lo /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/latest/download/yq_linux_${YQ_ARCH}" && \
+    chmod +x /usr/local/bin/yq
 
 # Install Claude Code CLI using native installer
 # The installer places the binary in ~/.local/bin
