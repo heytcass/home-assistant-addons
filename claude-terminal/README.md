@@ -125,7 +125,7 @@ test-endpoint
 
 ## Architecture
 
-- **Base Image**: Home Assistant Alpine Linux base (3.19)
+- **Base Image**: Home Assistant Alpine Linux base (3.21)
 - **Container Runtime**: Compatible with Docker/Podman
 - **Web Terminal**: ttyd for browser-based access
 - **Process Management**: s6-overlay for reliable service startup
