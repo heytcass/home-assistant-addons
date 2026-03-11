@@ -111,7 +111,8 @@ migrate_legacy_auth_files() {
 # Install required tools
 install_tools() {
     bashio::log.info "Installing additional tools..."
-    if ! apk add --no-cache ttyd jq curl tmux; then
+    apt-get update -qq
+    if ! apt-get install -y --no-install-recommends ttyd jq curl tmux; then
         bashio::log.error "Failed to install required tools"
         exit 1
     fi
@@ -126,13 +127,13 @@ install_persistent_packages() {
     local apk_packages=""
     local pip_packages=""
 
-    # Collect APK packages from Home Assistant config
-    if bashio::config.has_value 'persistent_apk_packages'; then
+    # Collect APT packages from Home Assistant config
+    if bashio::config.has_value 'persistent_apt_packages'; then
         local config_apk
-        config_apk=$(bashio::config 'persistent_apk_packages')
+        config_apk=$(bashio::config 'persistent_apt_packages')
         if [ -n "$config_apk" ] && [ "$config_apk" != "null" ]; then
             apk_packages="$config_apk"
-            bashio::log.info "Found APK packages in config: $apk_packages"
+            bashio::log.info "Found APT packages in config: $apk_packages"
         fi
     fi
 
@@ -150,9 +151,9 @@ install_persistent_packages() {
     if [ -f "$persist_config" ]; then
         bashio::log.info "Found local persistent packages config"
 
-        # Get APK packages from local config
+        # Get APT packages from local config
         local local_apk
-        local_apk=$(jq -r '.apk_packages | join(" ")' "$persist_config" 2>/dev/null || echo "")
+        local_apk=$(jq -r '.apt_packages | join(" ")' "$persist_config" 2>/dev/null || echo "")
         if [ -n "$local_apk" ]; then
             apk_packages="$apk_packages $local_apk"
         fi
@@ -169,14 +170,14 @@ install_persistent_packages() {
     apk_packages=$(echo "$apk_packages" | tr ' ' '\n' | sort -u | tr '\n' ' ' | xargs)
     pip_packages=$(echo "$pip_packages" | tr ' ' '\n' | sort -u | tr '\n' ' ' | xargs)
 
-    # Install APK packages
+    # Install APT packages
     if [ -n "$apk_packages" ]; then
-        bashio::log.info "Installing persistent APK packages: $apk_packages"
+        bashio::log.info "Installing persistent APT packages: $apk_packages"
         # shellcheck disable=SC2086
-        if apk add --no-cache $apk_packages; then
-            bashio::log.info "APK packages installed successfully"
+        if apt-get install -y --no-install-recommends $apk_packages; then
+            bashio::log.info "APT packages installed successfully"
         else
-            bashio::log.warning "Some APK packages failed to install"
+            bashio::log.warning "Some APT packages failed to install"
         fi
     fi
 

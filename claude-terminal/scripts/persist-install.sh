@@ -3,7 +3,7 @@
 # persist-install - Install packages that persist across container restarts
 #
 # Usage:
-#   persist-install apk <package1> [package2] ...  - Install APK packages
+#   persist-install apt <package1> [package2] ...  - Install APT packages
 #   persist-install pip <package1> [package2] ...  - Install pip packages
 #   persist-install list                           - List persistent packages
 #   persist-install help                           - Show this help message
@@ -24,7 +24,7 @@ PERSIST_CONFIG="/data/persistent-packages.json"
 # Initialize config file if it doesn't exist
 init_config() {
     if [ ! -f "$PERSIST_CONFIG" ]; then
-        echo '{"apk_packages": [], "pip_packages": []}' > "$PERSIST_CONFIG"
+        echo '{"apt_packages": [], "pip_packages": []}' > "$PERSIST_CONFIG"
     fi
 }
 
@@ -33,15 +33,15 @@ show_help() {
     echo -e "${BLUE}persist-install${NC} - Install packages that persist across container restarts"
     echo ""
     echo "Usage:"
-    echo "  persist-install apk <package1> [package2] ...  - Install APK packages"
+    echo "  persist-install apt <package1> [package2] ...  - Install APT packages"
     echo "  persist-install pip <package1> [package2] ...  - Install pip packages"
     echo "  persist-install list                           - List persistent packages"
-    echo "  persist-install remove apk <package>           - Remove APK package from persistence"
+    echo "  persist-install remove apt <package>           - Remove APT package from persistence"
     echo "  persist-install remove pip <package>           - Remove pip package from persistence"
     echo "  persist-install help                           - Show this help message"
     echo ""
     echo "Examples:"
-    echo "  persist-install apk vim htop"
+    echo "  persist-install apt vim htop"
     echo "  persist-install pip requests pandas numpy"
     echo "  persist-install list"
     echo ""
@@ -57,13 +57,13 @@ list_packages() {
     echo "==================="
     echo ""
 
-    echo -e "${GREEN}APK Packages:${NC}"
-    local apk_packages
-    apk_packages=$(jq -r '.apk_packages[]' "$PERSIST_CONFIG" 2>/dev/null || echo "")
-    if [ -z "$apk_packages" ]; then
+    echo -e "${GREEN}APT Packages:${NC}"
+    local apt_packages
+    apt_packages=$(jq -r '.apt_packages[]' "$PERSIST_CONFIG" 2>/dev/null || echo "")
+    if [ -z "$apt_packages" ]; then
         echo "  (none)"
     else
-        echo "$apk_packages" | while read -r pkg; do
+        echo "$apt_packages" | while read -r pkg; do
             echo "  - $pkg"
         done
     fi
@@ -81,29 +81,29 @@ list_packages() {
     fi
 }
 
-# Install APK packages
-install_apk() {
+# Install APT packages
+install_apt() {
     init_config
 
     if [ $# -eq 0 ]; then
         echo -e "${RED}Error:${NC} No packages specified"
-        echo "Usage: persist-install apk <package1> [package2] ..."
+        echo "Usage: persist-install apt <package1> [package2] ..."
         exit 1
     fi
 
     local packages=("$@")
 
-    echo -e "${BLUE}Installing APK packages:${NC} ${packages[*]}"
+    echo -e "${BLUE}Installing APT packages:${NC} ${packages[*]}"
 
     # Install packages
-    if apk add --no-cache "${packages[@]}"; then
+    if apt-get install -y --no-install-recommends "${packages[@]}"; then
         echo -e "${GREEN}Installation successful!${NC}"
 
         # Add to persistence config
         for pkg in "${packages[@]}"; do
             # Check if already in list
-            if ! jq -e ".apk_packages | index(\"$pkg\")" "$PERSIST_CONFIG" > /dev/null 2>&1; then
-                jq ".apk_packages += [\"$pkg\"]" "$PERSIST_CONFIG" > "${PERSIST_CONFIG}.tmp"
+            if ! jq -e ".apt_packages | index(\"$pkg\")" "$PERSIST_CONFIG" > /dev/null 2>&1; then
+                jq ".apt_packages += [\"$pkg\"]" "$PERSIST_CONFIG" > "${PERSIST_CONFIG}.tmp"
                 mv "${PERSIST_CONFIG}.tmp" "$PERSIST_CONFIG"
                 echo -e "${GREEN}+${NC} Added '$pkg' to persistent packages"
             else
@@ -162,15 +162,15 @@ remove_package() {
 
     if [ -z "$pkg_type" ] || [ -z "$pkg_name" ]; then
         echo -e "${RED}Error:${NC} Missing arguments"
-        echo "Usage: persist-install remove <apk|pip> <package>"
+        echo "Usage: persist-install remove <apt|pip> <package>"
         exit 1
     fi
 
     case "$pkg_type" in
-        apk)
-            jq "del(.apk_packages[] | select(. == \"$pkg_name\"))" "$PERSIST_CONFIG" > "${PERSIST_CONFIG}.tmp"
+        apt)
+            jq "del(.apt_packages[] | select(. == \"$pkg_name\"))" "$PERSIST_CONFIG" > "${PERSIST_CONFIG}.tmp"
             mv "${PERSIST_CONFIG}.tmp" "$PERSIST_CONFIG"
-            echo -e "${GREEN}-${NC} Removed '$pkg_name' from persistent APK packages"
+            echo -e "${GREEN}-${NC} Removed '$pkg_name' from persistent APT packages"
             echo -e "${YELLOW}Note:${NC} Package is still installed until container restart"
             ;;
         pip)
@@ -181,7 +181,7 @@ remove_package() {
             ;;
         *)
             echo -e "${RED}Error:${NC} Unknown package type '$pkg_type'"
-            echo "Usage: persist-install remove <apk|pip> <package>"
+            echo "Usage: persist-install remove <apt|pip> <package>"
             exit 1
             ;;
     esac
@@ -193,8 +193,8 @@ main() {
     shift || true
 
     case "$command" in
-        apk)
-            install_apk "$@"
+        apt)
+            install_apt "$@"
             ;;
         pip)
             install_pip "$@"
