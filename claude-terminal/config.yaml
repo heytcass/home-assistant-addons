@@ -30,10 +30,12 @@ ports_description:
 # Add-on configuration options
 options:
   auto_launch_claude: true
+  dangerously_skip_permissions: false
   persistent_apk_packages: []
   persistent_pip_packages: []
 schema:
   auto_launch_claude: bool?
+  dangerously_skip_permissions: bool?
   persistent_apk_packages:
     - str
   persistent_pip_packages:

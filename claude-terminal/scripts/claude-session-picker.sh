@@ -38,6 +38,10 @@ show_menu() {
     echo "  6) 🐚 Drop to bash shell"
     echo "  7) ❌ Exit"
     echo ""
+    echo "  ─────────────────────────────────────"
+    if is_yolo_enabled; then
+        echo "  8) ☢️  Dangerous Mode (YOLO - skip all permissions)"
+    fi
 }
 
 get_user_choice() {
@@ -146,6 +150,120 @@ exit_session_picker() {
     exit 0
 }
 
+launch_claude_yolo() {
+    # Pre-flight check: verify Claude binary is available before showing prompts
+    if ! command -v claude >/dev/null 2>&1; then
+        echo "YOLO Mode: Claude binary not found" >&2
+        clear
+        echo "❌ Error: Claude binary not found"
+        echo ""
+        echo "The Claude CLI is not installed or not in your PATH."
+        echo ""
+        echo "Try running option 5 (Authentication helper) to set up Claude."
+        echo ""
+        printf "Press Enter to return to menu..." >&2
+        read -r
+        return
+    fi
+
+    clear
+    echo "╔══════════════════════════════════════════════════════════════╗"
+    echo "║               ☢️  DANGEROUS MODE WARNING (YOLO) ☢️            ║"
+    echo "╚══════════════════════════════════════════════════════════════╝"
+    echo ""
+    if ! is_yolo_enabled; then
+        echo "❌ YOLO mode is disabled by default for safety"
+        echo ""
+        echo "To enable it explicitly, set: ALLOW_YOLO_MODE=1"
+        echo "(e.g. in add-on configuration/environment)"
+        echo ""
+        printf "Press Enter to return to menu..." >&2
+        read -r
+        return
+    fi
+
+    echo "You are about to launch Claude with --dangerously-skip-permissions"
+    echo ""
+    echo "⚠️  THIS IS EXTREMELY DANGEROUS! ⚠️"
+    echo ""
+    echo "Dangerous (YOLO) mode allows Claude to:"
+    echo "  • DELETE your Home Assistant configuration"
+    echo "  • EXPOSE credentials, API keys, and tokens"
+    echo "  • MODIFY or DELETE automations without asking"
+    echo "  • EXECUTE destructive system commands"
+    echo "  • ACCESS and TRANSMIT sensitive data"
+    echo ""
+    echo "🚨 ONLY use this in isolated test environments!"
+    echo "🚨 NEVER use this on production Home Assistant!"
+    echo ""
+    printf "Type 'YOLO' to confirm (or anything else to cancel): "
+    read -r confirmation
+
+    if [ "$confirmation" != "YOLO" ]; then
+        echo ""
+        echo "❌ YOLO Mode cancelled. Returning to main menu..."
+        sleep 2
+        return
+    fi
+
+    echo ""
+    echo "✅ YOLO Mode confirmed!"
+    echo ""
+    echo "Select session type for YOLO Mode:"
+    echo "  1) 🆕 New session"
+    echo "  2) ⏩ Continue most recent conversation"
+    echo "  3) 📋 Resume from conversation list"
+    echo ""
+    printf "Enter your choice [1-3] (default: 1): "
+    read -r yolo_choice
+
+    # Default to 1 if empty
+    if [ -z "$yolo_choice" ]; then
+        yolo_choice=1
+    fi
+
+    # Validate choice - return to main menu on invalid input to ensure users
+    # get exactly the session type they requested rather than silently defaulting.
+    if [ "$yolo_choice" != "1" ] && [ "$yolo_choice" != "2" ] && [ "$yolo_choice" != "3" ]; then
+        echo "YOLO Mode: Invalid session type choice: '$yolo_choice' (expected 1-3)" >&2
+        echo ""
+        echo "❌ Invalid choice: '$yolo_choice'"
+        echo "   Valid options are 1 (New), 2 (Continue), or 3 (Resume)"
+        echo ""
+        printf "Press Enter to return to menu..." >&2
+        read -r
+        return
+    fi
+
+    # Launch Claude with IS_SANDBOX scoped to the command (not exported globally).
+    # exec replaces this process; if exec fails, the lines after it run as a fallback.
+    case "$yolo_choice" in
+        1)
+            echo "🚀 Starting new YOLO session..."
+            sleep 1
+            IS_SANDBOX=1 exec claude --dangerously-skip-permissions
+            ;;
+        2)
+            echo "⏩ Continuing most recent conversation in YOLO mode..."
+            sleep 1
+            IS_SANDBOX=1 exec claude -c --dangerously-skip-permissions
+            ;;
+        3)
+            echo "📋 Opening conversation list for YOLO mode..."
+            sleep 1
+            IS_SANDBOX=1 exec claude -r --dangerously-skip-permissions
+            ;;
+    esac
+
+    # If we reach here, exec failed
+    echo "YOLO Mode: Failed to launch Claude" >&2
+    echo ""
+    echo "❌ Failed to launch Claude. Check that the CLI is installed correctly."
+    echo ""
+    printf "Press Enter to return to menu..." >&2
+    read -r
+}
+
 # Main execution flow
 main() {
     while true; do
@@ -182,6 +300,17 @@ main() {
                 ;;
             7)
                 exit_session_picker
+                ;;
+            8)
+                if is_yolo_enabled; then
+                    launch_claude_yolo
+                else
+                    echo ""
+                    echo "❌ Dangerous mode is disabled (set ALLOW_YOLO_MODE=1 to enable)."
+                    echo ""
+                    printf "Press Enter to continue..." >&2
+                    read -r
+                fi
                 ;;
             *)
                 echo ""
