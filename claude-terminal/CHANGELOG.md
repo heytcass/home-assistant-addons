@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.9.0
+
+### 🔄 Changed
+- **Reverted to npm installation**: Switched back from native installer to `npm install -g @anthropic-ai/claude-code`
+  - Native binary requires musl 1.2.6+ (`posix_getdents` symbol), which Alpine 3.21 does not ship
+  - npm installation runs on Node.js, avoiding all musl binary compatibility issues
+  - Resolves #57, #60, #61
+- **Removed native binary symlink logic** from `run.sh` (no longer needed with npm install)
+
 ## 1.7.0
 
 ### ✨ New Features
