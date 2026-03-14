@@ -213,31 +213,83 @@ setup_session_picker() {
             bashio::log.info "Persist-install script installed successfully"
         fi
     fi
+
+    # Setup welcome script
+    if [ -f "/opt/scripts/welcome.sh" ]; then
+        if cp /opt/scripts/welcome.sh /usr/local/bin/welcome; then
+            chmod +x /usr/local/bin/welcome
+            bashio::log.info "Welcome script installed successfully"
+        else
+            bashio::log.warning "Failed to copy welcome script"
+        fi
+    fi
+
+    # Setup ha-context script
+    if [ -f "/opt/scripts/ha-context.sh" ]; then
+        if cp /opt/scripts/ha-context.sh /usr/local/bin/ha-context; then
+            chmod +x /usr/local/bin/ha-context
+            bashio::log.info "HA context script installed successfully"
+        else
+            bashio::log.warning "Failed to copy ha-context script"
+        fi
+    fi
+
+    # Write add-on version for welcome script to read (avoids bashio dependency in ttyd)
+    bashio::addon.version > /opt/scripts/addon-version 2>/dev/null || echo "unknown" > /opt/scripts/addon-version
 }
 
 # Legacy monitoring functions removed - using simplified /data approach
 
+# Generate Home Assistant context file for Claude sessions
+generate_ha_context() {
+    local ha_smart_context
+    ha_smart_context=$(bashio::config 'ha_smart_context' 'true')
+
+    if [ "$ha_smart_context" = "true" ]; then
+        bashio::log.info "Generating Home Assistant context for Claude sessions..."
+        if [ -f /usr/local/bin/ha-context ]; then
+            if /usr/local/bin/ha-context 2>&1 | while IFS= read -r line; do
+                bashio::log.info "$line"
+            done; then
+                bashio::log.info "HA context generated successfully"
+            else
+                bashio::log.warning "HA context generation had issues, continuing..."
+            fi
+        else
+            bashio::log.warning "ha-context script not found, skipping"
+        fi
+    else
+        bashio::log.info "HA Smart Context disabled in configuration"
+    fi
+}
+
 # Determine Claude launch command based on configuration
 get_claude_launch_command() {
     local auto_launch_claude
-    
+
     # Get configuration value, default to true for backward compatibility
     auto_launch_claude=$(bashio::config 'auto_launch_claude' 'true')
-    
+
+    # Prepend welcome banner if available (runs inside ttyd, user-visible)
+    local welcome_prefix=""
+    if [ -f /usr/local/bin/welcome ]; then
+        welcome_prefix="welcome; "
+    fi
+
     if [ "$auto_launch_claude" = "true" ]; then
         # Use tmux for session persistence - attach to existing or create new
-        echo "tmux new-session -A -s claude 'claude'"
+        echo "${welcome_prefix}tmux new-session -A -s claude 'claude'"
     else
         # Session picker manages its own tmux sessions internally,
         # so do NOT wrap it in tmux (that would cause nested tmux errors)
         if [ -f /usr/local/bin/claude-session-picker ]; then
-            echo "/usr/local/bin/claude-session-picker"
+            echo "${welcome_prefix}/usr/local/bin/claude-session-picker"
         else
             # Fallback if session picker is missing
             bashio::log.warning "Session picker not found, falling back to auto-launch"
-            echo "tmux new-session -A -s claude 'claude'"
+            echo "${welcome_prefix}tmux new-session -A -s claude 'claude'"
         fi
-    fi                 
+    fi
 }
 
 
@@ -297,6 +349,7 @@ main() {
     install_tools
     setup_session_picker
     install_persistent_packages
+    generate_ha_context
     start_web_terminal
 }
 

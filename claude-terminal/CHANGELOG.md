@@ -1,5 +1,26 @@
 # Changelog
 
+## 2.0.0
+
+### ✨ New Features
+- **HA Smart Context**: Claude automatically knows your Home Assistant setup
+  - Generates a context file with system info, entity counts, installed add-ons, and recent errors
+  - Claude Code loads this automatically — no configuration needed
+  - Run `ha-context` to refresh, `ha-context --full` for detailed entity listings
+  - New `ha_smart_context` config option (default: true) to enable/disable
+  - Queries Supervisor + Core APIs: entities by domain, error log, system health
+- **Welcome Screen**: Polished first-launch experience with version tracking
+  - Styled banner displayed on every terminal open
+  - "What's New" highlights shown once per version upgrade
+  - Version tracking persisted across restarts
+
+### 🎯 User Experience
+- Every Claude session now has context about your HA environment out of the box
+- Ask Claude about your entities, automations, or errors — it already knows
+
+### 💙 Thank You
+To everyone who stuck with me through the v1.6–1.9 rough patch — the musl binary issues, the nested tmux errors, the auth helper breakage — thank you for your patience, your bug reports, and your trust. This release is dedicated to you. I heard every issue, and I'm committed to making Claude Terminal the best it can be.
+
 ## 1.9.0
 
 ### 🔄 Changed
