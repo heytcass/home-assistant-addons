@@ -316,6 +316,9 @@ start_web_terminal() {
     # This disables tmux mouse mode since ttyd has better mouse handling for web terminals
     export TTYD=1
 
+    # Terminal theme - dark palette with terracotta accents (#d97757)
+    local ttyd_theme='{"background":"#1a1b26","foreground":"#c0caf5","cursor":"#d97757","cursorAccent":"#1a1b26","selectionBackground":"#33467c","selectionForeground":"#c0caf5","black":"#15161e","red":"#f7768e","green":"#9ece6a","yellow":"#e0af68","blue":"#7aa2f7","magenta":"#bb9af7","cyan":"#7dcfff","white":"#a9b1d6","brightBlack":"#414868","brightRed":"#f7768e","brightGreen":"#9ece6a","brightYellow":"#e0af68","brightBlue":"#7aa2f7","brightMagenta":"#bb9af7","brightCyan":"#7dcfff","brightWhite":"#c0caf5"}'
+
     # Run ttyd with keepalive configuration to prevent WebSocket disconnects
     # See: https://github.com/heytcass/home-assistant-addons/issues/24
     exec ttyd \
@@ -326,6 +329,8 @@ start_web_terminal() {
         --client-option enableReconnect=true \
         --client-option reconnect=10 \
         --client-option reconnectInterval=5 \
+        --client-option "theme=${ttyd_theme}" \
+        --client-option fontSize=14 \
         bash -c "$launch_command"
 }
 

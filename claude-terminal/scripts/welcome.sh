@@ -8,6 +8,8 @@
 CYAN='\033[0;36m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+TERRACOTTA='\033[38;2;217;119;87m'
+WHITE='\033[1;37m'
 BOLD='\033[1m'
 DIM='\033[2m'
 NC='\033[0m'
@@ -33,11 +35,15 @@ save_version() {
 
 show_welcome_banner() {
     local version="$1"
+    local ver_padding
+    ver_padding=$(printf '%*s' $((34 - ${#version})) '')
     echo ""
-    echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════╗${NC}"
-    echo -e "  ${CYAN}║${NC}  ${BOLD}Claude Terminal${NC}  ${DIM}v${version}${NC}                                 ${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}  ${DIM}Home Assistant Add-on${NC} ${DIM}|${NC} ${DIM}Powered by Claude Code CLI${NC}     ${CYAN}║${NC}"
-    echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════╝${NC}"
+    echo -e "  ${TERRACOTTA}╔══════════════════════════════════════════════════════════╗${NC}"
+    echo -e "  ${TERRACOTTA}║${NC}                                                          ${TERRACOTTA}║${NC}"
+    echo -e "  ${TERRACOTTA}║${NC}   ${WHITE}Claude Terminal${NC}  ${DIM}v${version}${NC}${ver_padding}${TERRACOTTA}║${NC}"
+    echo -e "  ${TERRACOTTA}║${NC}   ${DIM}Home Assistant Add-on  ·  Powered by Claude Code CLI${NC}   ${TERRACOTTA}║${NC}"
+    echo -e "  ${TERRACOTTA}║${NC}                                                          ${TERRACOTTA}║${NC}"
+    echo -e "  ${TERRACOTTA}╚══════════════════════════════════════════════════════════╝${NC}"
 }
 
 show_whats_new() {
@@ -55,10 +61,10 @@ show_whats_new() {
 
     case "$version" in
         2.0.0)
-            echo -e "  ${YELLOW}*${NC} ${BOLD}HA Smart Context${NC} — Claude automatically knows your Home"
+            echo -e "  ${TERRACOTTA}*${NC} ${BOLD}HA Smart Context${NC} — Claude automatically knows your Home"
             echo -e "    Assistant setup (entities, add-ons, errors, system info)"
-            echo -e "  ${YELLOW}*${NC} ${BOLD}Welcome screen${NC} — version tracking and release highlights"
-            echo -e "  ${YELLOW}*${NC} Run ${DIM}ha-context${NC} anytime to refresh, ${DIM}ha-context --full${NC} for details"
+            echo -e "  ${TERRACOTTA}*${NC} ${BOLD}Welcome screen${NC} — version tracking and release highlights"
+            echo -e "  ${TERRACOTTA}*${NC} Run ${DIM}ha-context${NC} anytime to refresh, ${DIM}ha-context --full${NC} for details"
             echo ""
             echo -e "  ${DIM}Thank you for sticking with me through the v1.6-1.9 bumps.${NC}"
             echo -e "  ${DIM}This one's for you.${NC}"

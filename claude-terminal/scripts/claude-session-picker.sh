@@ -6,12 +6,20 @@
 
 TMUX_SESSION_NAME="claude"
 
+# Colors
+TERRACOTTA='\033[38;2;217;119;87m'
+WHITE='\033[1;37m'
+DIM='\033[2m'
+NC='\033[0m'
+
 show_banner() {
     clear
-    echo "╔══════════════════════════════════════════════════════════════╗"
-    echo "║                    🤖 Claude Terminal                        ║"
-    echo "║                   Interactive Session Picker                ║"
-    echo "╚══════════════════════════════════════════════════════════════╝"
+    echo ""
+    echo -e "  ${TERRACOTTA}╔══════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "  ${TERRACOTTA}║${NC}                                                              ${TERRACOTTA}║${NC}"
+    echo -e "  ${TERRACOTTA}║${NC}   ${WHITE}Claude Terminal${NC}  ${DIM}·  Session Picker${NC}                         ${TERRACOTTA}║${NC}"
+    echo -e "  ${TERRACOTTA}║${NC}                                                              ${TERRACOTTA}║${NC}"
+    echo -e "  ${TERRACOTTA}╚══════════════════════════════════════════════════════════════╝${NC}"
     echo ""
 }
 
