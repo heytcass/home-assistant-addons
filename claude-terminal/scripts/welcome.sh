@@ -82,7 +82,8 @@ main() {
     show_whats_new "$current_version" "$last_seen"
 
     echo ""
-    sleep 1
+    printf "  Press Enter to continue..."
+    read -r
 }
 
 main "$@"
