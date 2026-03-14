@@ -1,5 +1,24 @@
 # Changelog
 
+## 2.1.0
+
+### ✨ New Features
+- **Smart Status Bar**: tmux status bar now shows live system indicators
+  - Auth status: green when authenticated, red when credentials are missing
+  - Home Assistant connection: green when connected, yellow on issues
+  - "Claude Terminal" identity label on the left side
+  - Auto-refreshes every 15 seconds
+- **Terminal Theme**: Dark, polished color scheme applied to the web terminal
+  - Terracotta (#d97757) accent color for cursor and UI highlights
+  - Improved contrast and readability with 14px font size
+  - Matching tmux pane borders and window status colors
+
+### 🎨 Visual Improvements
+- Redesigned welcome banner with terracotta-accented borders and breathing room
+- Redesigned session picker banner with matching branded style
+- Dynamic version padding prevents box-drawing misalignment
+- Cohesive color language across terminal theme, tmux, and banners
+
 ## 2.0.0
 
 ### ✨ New Features
