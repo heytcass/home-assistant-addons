@@ -26,6 +26,12 @@ RUN apk add --no-cache \
 RUN npm install -g @anthropic-ai/claude-code@latest \
     && npm cache clean --force
 
+# Install uv for running ha-mcp (Python package manager/runner)
+# ha-mcp requires Python 3.13+, uv handles this automatically
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
+    && ln -sf /root/.local/bin/uv /usr/local/bin/uv \
+    && ln -sf /root/.local/bin/uvx /usr/local/bin/uvx
+
 # Create directory for Claude configuration and set working directory
 RUN mkdir -p /config/claude-config
 WORKDIR /config

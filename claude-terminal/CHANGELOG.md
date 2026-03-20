@@ -52,6 +52,12 @@ To everyone who stuck with me through the v1.6–1.9 rough patch — the musl bi
 ## 1.7.0
 
 ### ✨ New Features
+- **Bundled Home Assistant MCP Server** (#48): Claude Code now has native Home Assistant integration
+  - Switched to [homeassistant-ai/ha-mcp](https://github.com/homeassistant-ai/ha-mcp) - the comprehensive HA MCP server
+  - 97+ tools for entity control, automations, scripts, dashboards, history, and more
+  - Automatic configuration using Supervisor API - no manual token setup required
+  - Natural language control: "Turn off the living room lights", "Create an automation for sunset"
+  - New `enable_ha_mcp` configuration option (enabled by default)
 - **Session Persistence with tmux** (#46): Claude sessions now survive browser navigation
   - Sessions persist when navigating away from the terminal in Home Assistant
   - New "Reconnect to existing session" option in session picker (option 0)
@@ -59,7 +65,19 @@ To everyone who stuck with me through the v1.6–1.9 rough patch — the musl bi
   - tmux integration provides robust session management
   - Contributed by [@petterl](https://github.com/petterl)
 
-### 🛠️ Technical Details
+### 🛠️ Configuration
+Enable or disable the Home Assistant MCP integration in your add-on config:
+```yaml
+enable_ha_mcp: true  # default
+```
+
+### 📦 Technical Details
+- Uses `uvx ha-mcp@3.5.1` for automatic package management and Python version handling
+- Installed [uv](https://github.com/astral-sh/uv) for fast Python package execution
+- MCP server connects to Home Assistant via internal Supervisor API (`http://supervisor/core`)
+- Authentication uses the add-on's Supervisor token automatically
+
+### 🛠️ tmux Technical Details
 - Added tmux package to container
 - Custom tmux configuration optimized for web terminals:
   - Mouse mode intelligently disabled when using ttyd (prevents conflicts)
@@ -69,6 +87,14 @@ To everyone who stuck with me through the v1.6–1.9 rough patch — the musl bi
   - Visual improvements with better status bar
 - Session picker enhanced with reconnection logic
 - Automatic session cleanup and management
+
+### 💬 Example Usage
+Once configured, you can ask Claude things like:
+- "What's the current state of my thermostat?"
+- "Turn on the porch lights"
+- "Create an automation that turns on the coffee maker at 7 AM"
+- "Show me the energy usage for the last week"
+- "Debug why my motion sensor automation isn't working"
 
 ### 🎯 User Experience
 - No more lost work when switching between Home Assistant pages

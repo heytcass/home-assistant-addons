@@ -343,6 +343,19 @@ run_health_check() {
     fi
 }
 
+# Setup ha-mcp (Home Assistant MCP Server) for Claude Code integration
+setup_ha_mcp() {
+    if [ -f "/opt/scripts/setup-ha-mcp.sh" ]; then
+        bashio::log.info "Setting up Home Assistant MCP integration..."
+        chmod +x /opt/scripts/setup-ha-mcp.sh
+        # Source the script to get the configure function
+        source /opt/scripts/setup-ha-mcp.sh
+        configure_ha_mcp_server || bashio::log.warning "ha-mcp setup encountered issues but continuing..."
+    else
+        bashio::log.info "ha-mcp setup script not found, skipping MCP integration"
+    fi
+}
+
 # Main execution
 main() {
     bashio::log.info "Initializing Claude Terminal add-on..."
@@ -355,6 +368,7 @@ main() {
     setup_session_picker
     install_persistent_packages
     generate_ha_context
+    setup_ha_mcp
     start_web_terminal
 }
 
