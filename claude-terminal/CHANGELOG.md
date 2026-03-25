@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.2.1
+
+### 🛠️ Configuration
+- Disable remote access port 7681 by default
+
+### 🔒 Security Note
+The default configuration enabled unauthenticated access on the local network. For users who have not customized the port setting, direct access on port 7681 is now disabled by default. Access through Home Assistant (ingress) is not affected by this change. Users who need direct port access can re-enable it in the add-on configuration.
+
 ## 2.2.0
 
 ### ✨ New Features
