@@ -16,6 +16,9 @@ jobs:
       - uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: claude-terminal/Dockerfile
+          failure-threshold: error
+          # HA add-ons use BUILD_FROM arg for base image and Alpine rolling packages
+          ignore: DL3006,DL3018
 
   build:
     name: Build (${{ matrix.arch }})
@@ -43,7 +46,9 @@ jobs:
         with:
           context: ./claude-terminal
           push: false
-          load: true
+          # --load only works for native arch; cross-arch just verifies build succeeds
+          load: ${{ matrix.arch == 'amd64' }}
+          platforms: ${{ matrix.arch == 'amd64' && 'linux/amd64' || 'linux/arm64' }}
           tags: test/claude-terminal:${{ matrix.arch }}
           build-args: |
             BUILD_FROM=${{ matrix.build_from }}
