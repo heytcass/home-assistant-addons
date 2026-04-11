@@ -1,0 +1,88 @@
+name: Build & Smoke Test
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "claude-terminal/**"
+      - ".github/workflows/build-test.yml"
+
+jobs:
+  lint:
+    name: Lint Dockerfile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: claude-terminal/Dockerfile
+
+  build:
+    name: Build (${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            build_from: ghcr.io/home-assistant/amd64-base:3.21
+          - arch: aarch64
+            build_from: ghcr.io/home-assistant/aarch64-base:3.21
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        if: matrix.arch != 'amd64'
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build container
+        uses: docker/build-push-action@v6
+        with:
+          context: ./claude-terminal
+          push: false
+          load: true
+          tags: test/claude-terminal:${{ matrix.arch }}
+          build-args: |
+            BUILD_FROM=${{ matrix.build_from }}
+
+      - name: Smoke test — image is runnable
+        if: matrix.arch == 'amd64'
+        run: |
+          docker run --rm --entrypoint /bin/bash \
+            test/claude-terminal:amd64 -c "echo 'Image runs OK'"
+
+      - name: Smoke test — scripts are executable
+        if: matrix.arch == 'amd64'
+        run: |
+          docker run --rm --entrypoint /bin/bash \
+            test/claude-terminal:amd64 -c '
+              for script in \
+                /run.sh \
+                /opt/scripts/claude-session-picker.sh \
+                /opt/scripts/setup-ha-mcp.sh \
+                /opt/scripts/health-check.sh \
+                /opt/scripts/welcome.sh; do
+                if [ ! -x "$script" ]; then
+                  echo "FAIL: $script is not executable"
+                  exit 1
+                fi
+                echo "OK: $script"
+              done
+            '
+
+      - name: Smoke test — key binaries available
+        if: matrix.arch == 'amd64'
+        run: |
+          docker run --rm --entrypoint /bin/bash \
+            test/claude-terminal:amd64 -c '
+              for bin in node npm claude git tmux jq uv; do
+                if ! which "$bin" > /dev/null 2>&1; then
+                  echo "FAIL: $bin not found"
+                  exit 1
+                fi
+                echo "OK: $bin"
+              done
+            '
