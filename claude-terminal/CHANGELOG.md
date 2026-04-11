@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.2.2
+
+### 🐛 Bug Fixes
+- **Fixed ha-mcp installation on Python 3.12** (#79): Added `--index-strategy unsafe-best-match` to uvx invocations to resolve package resolution failures when the HA wheels index lacks compatible wheels for the current Python version
+  - Contributed by [@tt2g89](https://github.com/tt2g89)
+
+### 🛠️ CI/CD
+- Added automated build and smoke test workflow for pull requests
+  - Dockerfile linting via hadolint
+  - Container builds verified for amd64 and aarch64
+  - Smoke tests for script executability and required binaries
+  - Required status checks prevent merging broken PRs
+
 ## 2.2.1
 
 ### 🛠️ Configuration
