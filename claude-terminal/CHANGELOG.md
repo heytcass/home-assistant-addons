@@ -372,3 +372,4 @@ persistent_pip_packages:
   - Direct access to Home Assistant configuration
   - OAuth authentication with Anthropic account
   - Auto-launches Claude in interactive mode
+# Test
