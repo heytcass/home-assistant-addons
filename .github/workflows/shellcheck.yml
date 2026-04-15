@@ -1,0 +1,28 @@
+name: ShellCheck
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "claude-terminal/**/*.sh"
+      - "claude-terminal/run.sh"
+      - ".github/workflows/shellcheck.yml"
+
+jobs:
+  shellcheck:
+    name: Lint shell scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@2.0.0
+        with:
+          scandir: claude-terminal
+          severity: warning
+          # SC1008: unsupported shebang (#!/usr/bin/with-contenv bashio is valid for HA add-ons)
+          # SC1091: sourced files not available in CI (bashio, HA runtime scripts)
+          additional_files: run.sh
+          ignore_names: tmux.conf
+        env:
+          SHELLCHECK_OPTS: "-s bash -e SC1008 -e SC1091"

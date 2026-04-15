@@ -1,0 +1,71 @@
+name: Security Scan
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "claude-terminal/Dockerfile"
+      - "claude-terminal/run.sh"
+      - ".github/workflows/security-scan.yml"
+  schedule:
+    # Weekly scan to catch newly disclosed CVEs
+    - cron: "23 7 * * 1"
+
+permissions:
+  security-events: write
+
+jobs:
+  trivy:
+    name: Container vulnerability scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image for scanning
+        uses: docker/build-push-action@v6
+        with:
+          context: ./claude-terminal
+          push: false
+          load: true
+          tags: scan/claude-terminal:latest
+          build-args: |
+            BUILD_FROM=ghcr.io/home-assistant/amd64-base:3.21
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: scan/claude-terminal:latest
+          format: table
+          output: trivy-results.txt
+          severity: HIGH,CRITICAL
+          exit-code: "0"
+
+      - name: Post results to job summary
+        if: always()
+        run: |
+          echo "## Container Security Scan Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          if [ -s trivy-results.txt ]; then
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            cat trivy-results.txt >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No HIGH or CRITICAL vulnerabilities found." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Run Trivy (SARIF for Security tab)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: scan/claude-terminal:latest
+          format: sarif
+          output: trivy-results.sarif
+          severity: HIGH,CRITICAL
+
+      - name: Upload SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif

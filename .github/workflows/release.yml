@@ -1,0 +1,52 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Validate tag matches config.yaml
+        run: |
+          config_version=$(grep '^version:' claude-terminal/config.yaml | sed 's/version: *"\?\([^"]*\)"\?/\1/')
+          tag_version="${{ steps.version.outputs.version }}"
+          if [ "$config_version" != "$tag_version" ]; then
+            echo "::error::Tag version ($tag_version) does not match config.yaml version ($config_version)"
+            exit 1
+          fi
+          echo "Version $tag_version validated"
+
+      - name: Extract changelog for this version
+        id: changelog
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          # Extract content between this version's header and the next ## header
+          awk -v ver="$version" \
+            'BEGIN{found=0} /^## /{if(found)exit; if($2==ver)found=1; next} found{print}' \
+            claude-terminal/CHANGELOG.md > /tmp/changelog.md
+          if [ ! -s /tmp/changelog.md ]; then
+            echo "::warning::No changelog entry found for version $version"
+            echo "Release $version" > /tmp/changelog.md
+          fi
+          echo "Extracted changelog for v${version}:"
+          cat /tmp/changelog.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "v${{ steps.version.outputs.version }}"
+          body_path: /tmp/changelog.md
+          generate_release_notes: false
