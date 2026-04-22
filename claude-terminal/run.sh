@@ -343,6 +343,75 @@ run_health_check() {
     fi
 }
 
+# Optionally start an SSH server for remote access (VS Code, terminal, etc.)
+setup_ssh() {
+    local enable_ssh
+    enable_ssh=$(bashio::config 'enable_ssh' 'false')
+
+    if [ "$enable_ssh" != "true" ]; then
+        bashio::log.info "SSH server disabled"
+        return 0
+    fi
+
+    local ssh_port
+    ssh_port=$(bashio::config 'ssh_port' '2222')
+
+    bashio::log.info "Setting up SSH server on port ${ssh_port}..."
+
+    # Install openssh server if not already present
+    if ! command -v sshd &>/dev/null; then
+        apk add --no-cache openssh || { bashio::log.error "Failed to install openssh"; return 1; }
+    fi
+
+    # Persist host keys in data dir so they survive container restarts
+    local host_key_dir="${ANTHROPIC_HOME}/ssh"
+    mkdir -p "$host_key_dir"
+    chmod 700 "$host_key_dir"
+
+    for key_type in rsa ed25519; do
+        local key_file="${host_key_dir}/ssh_host_${key_type}_key"
+        if [ ! -f "$key_file" ]; then
+            ssh-keygen -t "$key_type" -f "$key_file" -N "" -q
+            bashio::log.info "Generated SSH host key: ${key_file}"
+        fi
+    done
+
+    # Write authorized keys from config
+    local ssh_user_dir="${HOME}/.ssh"
+    mkdir -p "$ssh_user_dir"
+    chmod 700 "$ssh_user_dir"
+    local auth_keys_file="${ssh_user_dir}/authorized_keys"
+    : > "$auth_keys_file"
+
+    local keys_raw
+    keys_raw=$(bashio::config 'ssh_authorized_keys' 2>/dev/null || echo "")
+    if [ -n "$keys_raw" ]; then
+        # bashio returns JSON array for multi-value or raw string for single value
+        if echo "$keys_raw" | jq -e 'type == "array"' > /dev/null 2>&1; then
+            echo "$keys_raw" | jq -r '.[]' >> "$auth_keys_file"
+        else
+            echo "$keys_raw" >> "$auth_keys_file"
+        fi
+    fi
+    bashio::log.info "SSH authorized keys written: $(wc -l < "$auth_keys_file" | tr -d ' ') key(s)"
+    chmod 600 "$auth_keys_file"
+
+    # Write minimal sshd config
+    cat > /etc/ssh/sshd_config <<EOF
+Port ${ssh_port}
+HostKey ${host_key_dir}/ssh_host_rsa_key
+HostKey ${host_key_dir}/ssh_host_ed25519_key
+AuthorizedKeysFile ${auth_keys_file}
+PubkeyAuthentication yes
+PasswordAuthentication no
+PermitRootLogin yes
+EOF
+
+    # Start sshd in background
+    /usr/sbin/sshd || { bashio::log.error "Failed to start sshd"; return 1; }
+    bashio::log.info "SSH server started on port ${ssh_port}"
+}
+
 # Setup ha-mcp (Home Assistant MCP Server) for Claude Code integration
 setup_ha_mcp() {
     if [ -f "/opt/scripts/setup-ha-mcp.sh" ]; then
@@ -368,6 +437,7 @@ main() {
     setup_session_picker
     install_persistent_packages
     generate_ha_context
+    setup_ssh
     setup_ha_mcp
     start_web_terminal
 }
