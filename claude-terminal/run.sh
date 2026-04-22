@@ -6,17 +6,25 @@ set -o pipefail
 
 # Initialize environment for Claude Code CLI using /data (HA best practice)
 init_environment() {
-    # Use /data exclusively - guaranteed writable by HA Supervisor
-    local data_home="/data/home"
-    local config_dir="/data/.config"
-    local cache_dir="/data/.cache"
-    local state_dir="/data/.local/state"
-    local claude_config_dir="/data/.config/claude"
+    # Allow user to override the data base directory (e.g. /config/.claude-data)
+    # so that Claude sessions/config are accessible via the HA /config volume.
+    # Defaults to /data (HA Supervisor guaranteed-writable volume).
+    local data_base
+    data_base=$(bashio::config 'claude_data_path' '')
+    if [ -z "$data_base" ] || [ "$data_base" = "null" ]; then
+        data_base="/data"
+    fi
 
-    bashio::log.info "Initializing Claude Code environment in /data..."
+    local data_home="${data_base}/home"
+    local config_dir="${data_base}/.config"
+    local cache_dir="${data_base}/.cache"
+    local state_dir="${data_base}/.local/state"
+    local claude_config_dir="${data_base}/.config/claude"
+
+    bashio::log.info "Initializing Claude Code environment in ${data_base}..."
 
     # Create all required directories
-    if ! mkdir -p "$data_home" "$config_dir/claude" "$cache_dir" "$state_dir" "/data/.local"; then
+    if ! mkdir -p "$data_home" "$config_dir/claude" "$cache_dir" "$state_dir" "${data_base}/.local"; then
         bashio::log.error "Failed to create directories in /data"
         exit 1
     fi
@@ -29,11 +37,11 @@ init_environment() {
     export XDG_CONFIG_HOME="$config_dir"
     export XDG_CACHE_HOME="$cache_dir"
     export XDG_STATE_HOME="$state_dir"
-    export XDG_DATA_HOME="/data/.local/share"
-    
+    export XDG_DATA_HOME="${data_base}/.local/share"
+
     # Claude-specific environment variables
     export ANTHROPIC_CONFIG_DIR="$claude_config_dir"
-    export ANTHROPIC_HOME="/data"
+    export ANTHROPIC_HOME="$data_base"
 
     # Migrate any existing authentication files from legacy locations
     migrate_legacy_auth_files "$claude_config_dir"
@@ -234,6 +242,16 @@ setup_session_picker() {
         fi
     fi
 
+    # Setup working directory picker script
+    if [ -f "/opt/scripts/pick-working-dir.sh" ]; then
+        if cp /opt/scripts/pick-working-dir.sh /usr/local/bin/pick-working-dir; then
+            chmod +x /usr/local/bin/pick-working-dir
+            bashio::log.info "Working directory picker installed successfully"
+        else
+            bashio::log.warning "Failed to copy pick-working-dir script"
+        fi
+    fi
+
     # Write add-on version for welcome script to read (avoids bashio dependency in ttyd)
     bashio::addon.version > /opt/scripts/addon-version 2>/dev/null || echo "unknown" > /opt/scripts/addon-version
 }
@@ -270,6 +288,24 @@ get_claude_launch_command() {
     # Get configuration value, default to true for backward compatibility
     auto_launch_claude=$(bashio::config 'auto_launch_claude' 'true')
 
+    # Get working directory, default to /config
+    local working_dir
+    working_dir=$(bashio::config 'working_directory' '/config')
+    if [ -z "$working_dir" ] || [ "$working_dir" = "null" ]; then
+        working_dir="/config"
+    fi
+
+    # If prompt_working_directory is enabled, source the picker script so the
+    # user can confirm or change the dir on each session open.
+    local prompt_dir
+    prompt_dir=$(bashio::config 'prompt_working_directory' 'false')
+    local cd_prefix
+    if [ "$prompt_dir" = "true" ] && [ -f /usr/local/bin/pick-working-dir ]; then
+        cd_prefix=". /usr/local/bin/pick-working-dir '${working_dir}'; "
+    else
+        cd_prefix="cd '${working_dir}' 2>/dev/null || cd /config; "
+    fi
+
     # Prepend welcome banner if available (runs inside ttyd, user-visible)
     local welcome_prefix=""
     if [ -f /usr/local/bin/welcome ]; then
@@ -278,16 +314,16 @@ get_claude_launch_command() {
 
     if [ "$auto_launch_claude" = "true" ]; then
         # Use tmux for session persistence - attach to existing or create new
-        echo "${welcome_prefix}tmux new-session -A -s claude 'claude'"
+        echo "${welcome_prefix}${cd_prefix}tmux new-session -A -s claude 'claude'"
     else
         # Session picker manages its own tmux sessions internally,
         # so do NOT wrap it in tmux (that would cause nested tmux errors)
         if [ -f /usr/local/bin/claude-session-picker ]; then
-            echo "${welcome_prefix}/usr/local/bin/claude-session-picker"
+            echo "${welcome_prefix}${cd_prefix}/usr/local/bin/claude-session-picker"
         else
             # Fallback if session picker is missing
             bashio::log.warning "Session picker not found, falling back to auto-launch"
-            echo "${welcome_prefix}tmux new-session -A -s claude 'claude'"
+            echo "${welcome_prefix}${cd_prefix}tmux new-session -A -s claude 'claude'"
         fi
     fi
 }
