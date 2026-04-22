@@ -24,20 +24,29 @@ panel_admin: true
 # Port configuration
 ports:
   7681/tcp: null
+  2222/tcp: null
 ports_description:
   7681/tcp: "Web terminal (not required for ingress)"
+  2222/tcp: "SSH server (optional, enable in config)"
 
 # Add-on configuration options
 options:
   auto_launch_claude: true
   ha_smart_context: true
   enable_ha_mcp: true
+  enable_ssh: false
+  ssh_port: 2222
+  ssh_authorized_keys: []
   persistent_apk_packages: []
   persistent_pip_packages: []
 schema:
   auto_launch_claude: bool?
   ha_smart_context: bool?
   enable_ha_mcp: bool?
+  enable_ssh: bool?
+  ssh_port: int?
+  ssh_authorized_keys:
+    - str
   persistent_apk_packages:
     - str
   persistent_pip_packages:
