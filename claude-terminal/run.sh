@@ -277,11 +277,18 @@ build_claude_extra_flags() {
 
     if [ "$skip_perms" = "true" ]; then
         combined="--dangerously-skip-permissions"
+        # Claude Code refuses to run --dangerously-skip-permissions as root
+        # unless IS_SANDBOX=1 is set. Add-ons run as root inside a per-add-on
+        # container that is itself a sandbox per Home Assistant's model, so
+        # opting in is appropriate here. Without this, claude exits ~2s after
+        # launch and the terminal shows "[exited]".
+        export IS_SANDBOX=1
         bashio::log.warning "============================================================"
         bashio::log.warning "  DANGER: --dangerously-skip-permissions is ENABLED"
         bashio::log.warning "  Claude will run tools without asking for confirmation."
         bashio::log.warning "  This add-on has read/write access to /config and the"
         bashio::log.warning "  Supervisor API. Use only on trusted hosts."
+        bashio::log.warning "  (IS_SANDBOX=1 set so claude accepts the flag as root.)"
         bashio::log.warning "============================================================"
     fi
 

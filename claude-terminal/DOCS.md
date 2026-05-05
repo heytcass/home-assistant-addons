@@ -77,6 +77,14 @@ acceptable.
 
 If you are not absolutely sure you need this, **leave it disabled.**
 
+**Implementation note.** Claude Code refuses to run with
+`--dangerously-skip-permissions` while the user is root unless `IS_SANDBOX=1`
+is set in the environment. Home Assistant add-ons run as root inside a
+per-add-on container (a sandbox by design), so this add-on exports
+`IS_SANDBOX=1` automatically when the option is enabled. Without that, claude
+silently exits a couple of seconds after launch and the terminal would just
+show `[exited]`.
+
 ### About `extra_claude_flags`
 
 This is a free-form passthrough: whatever you put here is appended verbatim to
