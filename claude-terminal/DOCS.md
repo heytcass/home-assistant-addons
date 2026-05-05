@@ -26,8 +26,128 @@ Your OAuth credentials are stored in the `/config/claude-config` directory and w
 |--------|---------|-------------|
 | `auto_launch_claude` | `true` | Automatically start Claude when opening the terminal |
 | `enable_ha_mcp` | `true` | Enable Home Assistant MCP server integration |
+| `dangerously_skip_permissions` | `false` | **Read the warning below before enabling.** Launch Claude with `--dangerously-skip-permissions`, which disables all interactive tool-use confirmations. |
+| `extra_claude_flags` | `""` | Free-form CLI flags appended to every `claude` invocation (e.g. `--model claude-opus-4-7 --verbose`). Useful for forward-compatibility with new Claude Code flags before this add-on exposes them as dedicated options. |
+| `oauth_code` | `""` | One-shot field for pasting the OAuth code claude asks for at first login, when browser paste is flaky. See "OAuth code injection" section below. |
 | `persistent_apk_packages` | `[]` | APK packages to install on every startup |
 | `persistent_pip_packages` | `[]` | Python packages to install on every startup |
+
+### About `dangerously_skip_permissions` (read before enabling)
+
+When this option is **enabled**, the add-on launches Claude Code with the
+`--dangerously-skip-permissions` flag. This bypasses *every* interactive
+permission prompt: file edits, shell commands, network access — all tool calls
+execute without confirmation.
+
+**What this means in this add-on specifically:**
+
+- Claude has read/write access to your entire `/config` directory (your Home
+  Assistant configuration, secrets, automations, dashboards, blueprints, custom
+  components, etc.).
+- Claude has access to the Supervisor API (`hassio_api: true`,
+  `hassio_role: manager`) and the Home Assistant API. Combined with the bundled
+  ha-mcp integration, Claude can change device states, trigger services, edit
+  automations, and reconfigure your installation.
+- Claude can install arbitrary APK and pip packages via the persistent-package
+  mechanism, and can run shell commands as the add-on's root user.
+
+With permissions skipped, **a single hallucination, prompt injection, or
+mistaken instruction can silently brick your Home Assistant setup, exfiltrate
+secrets from `/config/secrets.yaml`, or take destructive action on connected
+devices.** Prompt injection is a real concern here: any document, log, sensor
+attribute, or web page Claude reads could contain instructions telling it to
+do something harmful, and with this flag set Claude will not ask first.
+
+**Disclaimer of responsibility.** Enabling this option is entirely at your own
+risk. The add-on author and the maintainers of this fork accept no liability
+for data loss, system damage, leaked credentials, unintended device actions,
+or any other consequence resulting from running Claude with permissions
+disabled. By turning the toggle on you confirm that you understand the
+trade-off and that you are running this on a host where that trade-off is
+acceptable.
+
+**Recommendations if you still want to enable it:**
+
+- Take a Home Assistant snapshot/backup *before* every Claude session.
+- Keep `/config` under version control (git) so you can diff and revert.
+- Do not use this on a production Home Assistant instance that controls
+  safety-critical devices (locks, alarms, garage doors, ovens, EV chargers,
+  etc.) without an out-of-band kill switch.
+- Strongly prefer leaving this **off** and approving prompts manually. The
+  flag exists for tightly sandboxed dev environments, not casual use.
+
+If you are not absolutely sure you need this, **leave it disabled.**
+
+**Implementation note.** Claude Code refuses to run with
+`--dangerously-skip-permissions` while the user is root unless `IS_SANDBOX=1`
+is set in the environment. Home Assistant add-ons run as root inside a
+per-add-on container (a sandbox by design), so this add-on exports
+`IS_SANDBOX=1` automatically when the option is enabled. Without that, claude
+silently exits a couple of seconds after launch and the terminal would just
+show `[exited]`.
+
+### About `extra_claude_flags`
+
+This is a free-form passthrough: whatever you put here is appended verbatim to
+every `claude` invocation started by the add-on (auto-launch and session-picker
+options 1–3). It exists so that new Claude Code CLI flags introduced upstream
+can be used immediately without waiting for a dedicated config option in this
+add-on. Examples:
+
+```yaml
+extra_claude_flags: "--model claude-opus-4-7"
+extra_claude_flags: "--verbose --debug"
+```
+
+**Limitation — values containing spaces are not supported.** The string is
+word-split on whitespace before being passed to `claude`, and inner quotes
+(`'…'` or `"…"`) inside this option are *not* re-parsed by the shell. So a
+value like `--append-system-prompt 'hello world'` would arrive at `claude` as
+three separate argv entries (`--append-system-prompt`, `'hello`, `world'`),
+not the intended quoted string. If you need a multi-word argument, drop into
+the session picker (set `auto_launch_claude: false`) and use option 4 (Custom
+Claude command) where the line is parsed by a real shell.
+
+If the flag you want is `--dangerously-skip-permissions`, prefer the dedicated
+`dangerously_skip_permissions` checkbox above so the warning banner is logged
+on startup.
+
+### About `oauth_code` (one-shot OAuth helper)
+
+Claude's first-time OAuth flow asks you to paste a long code into its TUI
+prompt. Browser-side paste (Cmd+V / right-click → Paste) into a ttyd terminal
+is unreliable — long strings get truncated, special characters get mangled,
+and the bracketed-paste protocol doesn't always survive the
+ttyd → tmux → claude chain. This field is a workaround for that single
+moment.
+
+**Workflow:**
+
+1. Open the add-on. Claude prints a URL like `https://claude.com/cai/oauth/authorize?...`.
+2. Open the URL on your Mac, authorize, copy the resulting code.
+3. In Home Assistant, go to **Settings → Add-ons → Claude Terminal → Configuration**.
+4. Paste the code into the **OAuth code** field.
+5. Click **SAVE** — **do NOT click "Restart"**.
+6. Within ~3 seconds, the field clears itself, claude completes auth, and the
+   terminal shows the normal claude UI.
+
+**How it works:** a background poller running inside the add-on reads
+`/addons/self/info` from the Supervisor every 2 seconds. When it sees a
+non-empty `oauth_code`, it `tmux send-keys` the value into the running
+claude pane (so the same process that generated the URL — and is holding the
+matching PKCE verifier in memory — receives it), then `POST`s a cleared
+options dict back to the Supervisor.
+
+**Why "Save, not Restart" matters:** the OAuth code is bound to the
+`code_challenge` claude sent to Anthropic when generating the URL, which is
+derived from a one-shot `code_verifier` claude keeps in memory. Restarting
+the add-on spawns a new claude with a new verifier, so your old code becomes
+useless and you'd need a fresh URL.
+
+If a restart happens for any reason while a code is pending, the field
+auto-clears on the next poll (because the new claude has a new verifier and
+the old code is junk). Just refresh the addon to grab the new URL and try
+again.
 
 ## Usage
 

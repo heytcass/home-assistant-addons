@@ -72,6 +72,9 @@ The add-on works out of the box with sensible defaults. Optional configuration:
 | Option | Default | Description |
 |--------|---------|-------------|
 | `auto_launch_claude` | `true` | Auto-start Claude on terminal open (set to `false` for session picker) |
+| `dangerously_skip_permissions` | `false` | ⚠️ Launch Claude with `--dangerously-skip-permissions` (no tool-use prompts). See [DOCS.md](DOCS.md#about-dangerously_skip_permissions-read-before-enabling) before enabling. |
+| `extra_claude_flags` | `""` | Free-form CLI flags appended to every `claude` invocation (e.g. `--model claude-opus-4-7`). |
+| `oauth_code` | `""` | One-shot helper for first-time login when browser paste is flaky — paste the OAuth code here and click Save (no restart). The addon types it into claude for you and self-clears the field. See [DOCS.md](DOCS.md#about-oauth_code-one-shot-oauth-helper). |
 | `persistent_apk_packages` | `[]` | List of APK packages to install on startup |
 | `persistent_pip_packages` | `[]` | List of pip packages to install on startup |
 

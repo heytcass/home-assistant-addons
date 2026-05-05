@@ -1,5 +1,43 @@
 # Changelog
 
+## 2.4.0
+
+### ✨ New Features
+- **`oauth_code` config option for paste-free first login**: ttyd's
+  browser-paste behaviour is flaky for long OAuth tokens, especially through
+  the ttyd → tmux → claude chain. This release adds a one-shot text field in
+  the add-on's Configuration tab. Paste your code there, click **Save**
+  (don't restart), and a background poller reads it from the Supervisor's
+  live options API, types it into the running claude pane via
+  `tmux send-keys`, and self-clears the field. See `DOCS.md` for the full
+  workflow and the rationale for "Save, not Restart" (the code is paired with
+  claude's in-memory PKCE verifier).
+
+### 🐛 Bug Fixes
+- **IS_SANDBOX=1 set automatically when `dangerously_skip_permissions` is
+  enabled**: claude refuses to run with `--dangerously-skip-permissions`
+  while running as the root user (which add-ons always do) unless
+  `IS_SANDBOX=1` is in the environment. Without this, claude exited
+  immediately on launch and the terminal showed `[exited]`. Tracked in
+  anthropics/claude-code#9184.
+
+## 2.3.0
+
+### ✨ New Features
+- **`dangerously_skip_permissions` option**: New checkbox in the add-on config that
+  launches Claude with `--dangerously-skip-permissions`, bypassing every
+  interactive tool-use prompt. Off by default. A bright warning banner is
+  written to the add-on log on every startup when enabled. See `DOCS.md` for the
+  full risk explanation and disclaimer of responsibility before turning it on.
+- **`extra_claude_flags` option**: Free-form passthrough string appended to every
+  `claude` invocation (auto-launch and session-picker options 1–3). Lets you
+  use new Claude Code CLI flags upstream without waiting for a dedicated
+  add-on option. Example: `extra_claude_flags: "--model claude-opus-4-7"`.
+
+Both options apply to the auto-launch path *and* to the "new / continue / resume"
+choices in the session picker. The "Custom Claude command" picker option is
+unchanged so it remains a true manual override.
+
 ## 2.2.2
 
 ### 🐛 Bug Fixes
