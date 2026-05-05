@@ -6,11 +6,23 @@
 
 TMUX_SESSION_NAME="claude"
 
+# CLAUDE_EXTRA_FLAGS is exported by run.sh from the add-on options
+# (--dangerously-skip-permissions and/or extra_claude_flags). When set,
+# it is appended to claude invocations from this picker.
+CLAUDE_EXTRA_FLAGS="${CLAUDE_EXTRA_FLAGS:-}"
+
 # Colors
 TERRACOTTA='\033[38;2;217;119;87m'
 WHITE='\033[1;37m'
+RED='\033[1;31m'
+YELLOW='\033[1;33m'
 DIM='\033[2m'
 NC='\033[0m'
+
+# True when --dangerously-skip-permissions is part of CLAUDE_EXTRA_FLAGS
+dangerous_mode_active() {
+    [[ "$CLAUDE_EXTRA_FLAGS" == *"--dangerously-skip-permissions"* ]]
+}
 
 show_banner() {
     clear
@@ -29,7 +41,18 @@ check_existing_session() {
 }
 
 show_menu() {
+    if dangerous_mode_active; then
+        echo -e "${RED}  ┌──────────────────────────────────────────────────────────────┐${NC}"
+        echo -e "${RED}  │  ⚠  DANGEROUS MODE: --dangerously-skip-permissions ENABLED   │${NC}"
+        echo -e "${RED}  │     Claude will run tools (edits, shell, devices) without    │${NC}"
+        echo -e "${RED}  │     asking. Disable in add-on options if this is unintended. │${NC}"
+        echo -e "${RED}  └──────────────────────────────────────────────────────────────┘${NC}"
+        echo ""
+    fi
     echo "Choose your Claude session type:"
+    if [ -n "$CLAUDE_EXTRA_FLAGS" ]; then
+        echo -e "  ${DIM}configured flags applied to options 1-3:${NC} ${YELLOW}${CLAUDE_EXTRA_FLAGS}${NC}"
+    fi
     echo ""
 
     # Show reconnect option if session exists
@@ -89,7 +112,7 @@ launch_claude_new() {
     fi
 
     sleep 1
-    exec tmux new-session -s "$TMUX_SESSION_NAME" 'claude'
+    exec tmux new-session -s "$TMUX_SESSION_NAME" "claude $CLAUDE_EXTRA_FLAGS"
 }
 
 launch_claude_continue() {
@@ -100,7 +123,7 @@ launch_claude_continue() {
     fi
 
     sleep 1
-    exec tmux new-session -s "$TMUX_SESSION_NAME" 'claude -c'
+    exec tmux new-session -s "$TMUX_SESSION_NAME" "claude -c $CLAUDE_EXTRA_FLAGS"
 }
 
 launch_claude_resume() {
@@ -111,13 +134,16 @@ launch_claude_resume() {
     fi
 
     sleep 1
-    exec tmux new-session -s "$TMUX_SESSION_NAME" 'claude -r'
+    exec tmux new-session -s "$TMUX_SESSION_NAME" "claude -r $CLAUDE_EXTRA_FLAGS"
 }
 
 launch_claude_custom() {
     echo ""
     echo "Enter your Claude command (e.g., 'claude --help' or 'claude -p \"hello\"'):"
     echo "Available flags: -c (continue), -r (resume), -p (print), --model, etc."
+    if [ -n "$CLAUDE_EXTRA_FLAGS" ]; then
+        echo -e "${DIM}Note:${NC} configured ${YELLOW}${CLAUDE_EXTRA_FLAGS}${NC} ${DIM}is NOT auto-applied here — re-add it manually if you need it.${NC}"
+    fi
     echo -n "> claude "
     read -r custom_args
 

@@ -263,6 +263,40 @@ generate_ha_context() {
     fi
 }
 
+# Build the extra Claude flags string from configuration
+# Combines --dangerously-skip-permissions (if enabled) with any user-provided
+# free-form flags. Exported as CLAUDE_EXTRA_FLAGS so child processes
+# (e.g. session picker) can apply the same flags to all launch modes.
+build_claude_extra_flags() {
+    local skip_perms
+    local extra_flags
+    local combined=""
+
+    skip_perms=$(bashio::config 'dangerously_skip_permissions' 'false')
+    extra_flags=$(bashio::config 'extra_claude_flags' '')
+
+    if [ "$skip_perms" = "true" ]; then
+        combined="--dangerously-skip-permissions"
+        bashio::log.warning "============================================================"
+        bashio::log.warning "  DANGER: --dangerously-skip-permissions is ENABLED"
+        bashio::log.warning "  Claude will run tools without asking for confirmation."
+        bashio::log.warning "  This add-on has read/write access to /config and the"
+        bashio::log.warning "  Supervisor API. Use only on trusted hosts."
+        bashio::log.warning "============================================================"
+    fi
+
+    if [ -n "$extra_flags" ] && [ "$extra_flags" != "null" ]; then
+        if [ -n "$combined" ]; then
+            combined="$combined $extra_flags"
+        else
+            combined="$extra_flags"
+        fi
+        bashio::log.info "Extra Claude flags: $extra_flags"
+    fi
+
+    export CLAUDE_EXTRA_FLAGS="$combined"
+}
+
 # Determine Claude launch command based on configuration
 get_claude_launch_command() {
     local auto_launch_claude
@@ -276,9 +310,15 @@ get_claude_launch_command() {
         welcome_prefix="welcome; "
     fi
 
+    # Build the claude invocation, appending any configured extra flags
+    local claude_cmd="claude"
+    if [ -n "$CLAUDE_EXTRA_FLAGS" ]; then
+        claude_cmd="claude $CLAUDE_EXTRA_FLAGS"
+    fi
+
     if [ "$auto_launch_claude" = "true" ]; then
         # Use tmux for session persistence - attach to existing or create new
-        echo "${welcome_prefix}tmux new-session -A -s claude 'claude'"
+        echo "${welcome_prefix}tmux new-session -A -s claude '${claude_cmd}'"
     else
         # Session picker manages its own tmux sessions internally,
         # so do NOT wrap it in tmux (that would cause nested tmux errors)
@@ -287,7 +327,7 @@ get_claude_launch_command() {
         else
             # Fallback if session picker is missing
             bashio::log.warning "Session picker not found, falling back to auto-launch"
-            echo "${welcome_prefix}tmux new-session -A -s claude 'claude'"
+            echo "${welcome_prefix}tmux new-session -A -s claude '${claude_cmd}'"
         fi
     fi
 }
@@ -369,6 +409,7 @@ main() {
     install_persistent_packages
     generate_ha_context
     setup_ha_mcp
+    build_claude_extra_flags
     start_web_terminal
 }
 

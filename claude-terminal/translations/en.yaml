@@ -1,0 +1,50 @@
+configuration:
+  auto_launch_claude:
+    name: Auto-launch Claude
+    description: >-
+      Start the Claude Code CLI automatically when you open the terminal. Turn
+      this off to land on a session picker instead (new / continue / resume /
+      custom).
+  ha_smart_context:
+    name: Generate Home Assistant context
+    description: >-
+      On startup, build a context file with information about your Home
+      Assistant instance so Claude has it ready in every session.
+  enable_ha_mcp:
+    name: Enable Home Assistant MCP server
+    description: >-
+      Run the bundled ha-mcp server so Claude can control entities, edit
+      automations, and query state via natural language. Auto-configures
+      against the Supervisor API.
+  dangerously_skip_permissions:
+    name: "DANGER: skip all Claude permission prompts"
+    description: >-
+      Launches Claude with --dangerously-skip-permissions. Every tool call
+      (file edits, shell commands, network access, device control via ha-mcp,
+      package installs as root) runs WITHOUT confirmation. A single hallucination
+      or prompt-injection from any document Claude reads can leak secrets from
+      /config or take destructive action on connected devices. By enabling this
+      you accept full responsibility — the add-on author and this fork's
+      maintainer accept no liability for data loss, leaked credentials, or
+      unintended device actions. Strongly recommended OFF. See DOCS for the
+      full warning.
+  extra_claude_flags:
+    name: Extra Claude CLI flags
+    description: >-
+      Free-form CLI flags appended verbatim to every `claude` invocation.
+      Useful for new Claude Code flags before this add-on exposes them as
+      dedicated options. Example: --model claude-opus-4-7. Values containing
+      spaces inside a single argument are not supported — see DOCS.
+  persistent_apk_packages:
+    name: Persistent APK packages
+    description: >-
+      Alpine packages installed on every container start so they survive
+      add-on restarts and updates.
+  persistent_pip_packages:
+    name: Persistent pip packages
+    description: >-
+      Python packages installed on every container start so they survive
+      add-on restarts and updates.
+network:
+  7681/tcp: Web terminal port (only needed for direct LAN access; ingress
+    works without it)

@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.3.0
+
+### ✨ New Features
+- **`dangerously_skip_permissions` option**: New checkbox in the add-on config that
+  launches Claude with `--dangerously-skip-permissions`, bypassing every
+  interactive tool-use prompt. Off by default. A bright warning banner is
+  written to the add-on log on every startup when enabled. See `DOCS.md` for the
+  full risk explanation and disclaimer of responsibility before turning it on.
+- **`extra_claude_flags` option**: Free-form passthrough string appended to every
+  `claude` invocation (auto-launch and session-picker options 1–3). Lets you
+  use new Claude Code CLI flags upstream without waiting for a dedicated
+  add-on option. Example: `extra_claude_flags: "--model claude-opus-4-7"`.
+
+Both options apply to the auto-launch path *and* to the "new / continue / resume"
+choices in the session picker. The "Custom Claude command" picker option is
+unchanged so it remains a true manual override.
+
 ## 2.2.2
 
 ### 🐛 Bug Fixes
