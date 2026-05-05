@@ -1,5 +1,26 @@
 # Changelog
 
+## 2.4.0
+
+### ✨ New Features
+- **`oauth_code` config option for paste-free first login**: ttyd's
+  browser-paste behaviour is flaky for long OAuth tokens, especially through
+  the ttyd → tmux → claude chain. This release adds a one-shot text field in
+  the add-on's Configuration tab. Paste your code there, click **Save**
+  (don't restart), and a background poller reads it from the Supervisor's
+  live options API, types it into the running claude pane via
+  `tmux send-keys`, and self-clears the field. See `DOCS.md` for the full
+  workflow and the rationale for "Save, not Restart" (the code is paired with
+  claude's in-memory PKCE verifier).
+
+### 🐛 Bug Fixes
+- **IS_SANDBOX=1 set automatically when `dangerously_skip_permissions` is
+  enabled**: claude refuses to run with `--dangerously-skip-permissions`
+  while running as the root user (which add-ons always do) unless
+  `IS_SANDBOX=1` is in the environment. Without this, claude exited
+  immediately on launch and the terminal showed `[exited]`. Tracked in
+  anthropics/claude-code#9184.
+
 ## 2.3.0
 
 ### ✨ New Features

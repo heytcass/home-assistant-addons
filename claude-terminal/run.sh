@@ -403,6 +403,85 @@ setup_ha_mcp() {
     fi
 }
 
+# OAuth code injector
+#
+# Polls the live Supervisor options endpoint every few seconds. When the user
+# pastes a fresh OAuth code into the `oauth_code` config field and clicks Save
+# in HA's UI (no restart required), the value lands in Supervisor's options
+# DB. We see it on the next poll, send-keys it into the running tmux claude
+# pane (so the same claude process that generated the URL — and the matching
+# PKCE verifier — receives it), then POST a cleared options dict back so the
+# field self-wipes. Restarting the addon is forbidden in this flow because a
+# restart spawns a fresh claude with a new PKCE verifier, invalidating any
+# code the user already obtained.
+#
+# Endpoint used: GET /addons/self/info — its .data.options block reflects the
+# live Supervisor DB, NOT /data/options.json (which only updates at boot).
+oauth_code_poller() {
+    local interval=2
+    local pane="claude:1.1"
+    local last_seen_empty=true
+
+    while true; do
+        sleep "$interval"
+
+        [ -z "$SUPERVISOR_TOKEN" ] && continue
+
+        local info code
+        info=$(curl -fsS -m 5 \
+            -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
+            http://supervisor/addons/self/info 2>/dev/null) || continue
+
+        code=$(printf '%s' "$info" | jq -r '.data.options.oauth_code // ""' 2>/dev/null)
+
+        if [ -z "$code" ] || [ "$code" = "null" ]; then
+            last_seen_empty=true
+            continue
+        fi
+
+        # Avoid log spam if the field has been non-empty for a while because
+        # the clear API call failed; only log on transitions.
+        if [ "$last_seen_empty" = "true" ]; then
+            bashio::log.info "oauth_code: received (${#code} chars), injecting into claude pane"
+            last_seen_empty=false
+        fi
+
+        if ! tmux has-session -t claude 2>/dev/null; then
+            bashio::log.warning "oauth_code: tmux session 'claude' not running yet, will retry"
+            continue
+        fi
+
+        # send-keys the code + Enter to the claude pane.
+        if ! tmux send-keys -t "$pane" -- "$code" Enter 2>/dev/null; then
+            bashio::log.warning "oauth_code: tmux send-keys failed"
+            continue
+        fi
+
+        # Clear the field via Supervisor API. Must send the full options
+        # dict because list-typed options aren't optional in schema validation.
+        local cleared
+        cleared=$(printf '%s' "$info" | jq -c '.data.options // {} | .oauth_code = ""')
+        if [ -n "$cleared" ]; then
+            curl -fsS -m 5 -X POST \
+                -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
+                -H "Content-Type: application/json" \
+                -d "{\"options\":${cleared}}" \
+                http://supervisor/addons/self/options >/dev/null 2>&1 \
+                && bashio::log.info "oauth_code: cleared, claude should be authenticating now" \
+                || bashio::log.warning "oauth_code: failed to clear field via Supervisor API"
+        fi
+    done
+}
+
+start_oauth_code_poller() {
+    if [ -z "$SUPERVISOR_TOKEN" ]; then
+        bashio::log.warning "SUPERVISOR_TOKEN not set; oauth_code injector disabled"
+        return
+    fi
+    oauth_code_poller &
+    bashio::log.info "oauth_code injector running in background (PID $!)"
+}
+
 # Main execution
 main() {
     bashio::log.info "Initializing Claude Terminal add-on..."
@@ -417,6 +496,7 @@ main() {
     generate_ha_context
     setup_ha_mcp
     build_claude_extra_flags
+    start_oauth_code_poller
     start_web_terminal
 }
 

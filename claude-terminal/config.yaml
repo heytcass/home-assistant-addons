@@ -1,7 +1,7 @@
 ---
 name: "Claude Terminal"
 description: "Terminal with Anthropic's Claude Code CLI, persistent auth, and packages"
-version: "2.3.0"
+version: "2.4.0"
 slug: "claude_terminal"
 init: false
 
@@ -34,6 +34,7 @@ options:
   enable_ha_mcp: true
   dangerously_skip_permissions: false
   extra_claude_flags: ""
+  oauth_code: ""
   persistent_apk_packages: []
   persistent_pip_packages: []
 schema:
@@ -42,6 +43,7 @@ schema:
   enable_ha_mcp: bool?
   dangerously_skip_permissions: bool?
   extra_claude_flags: str?
+  oauth_code: password?
   persistent_apk_packages:
     - str
   persistent_pip_packages:

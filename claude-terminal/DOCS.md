@@ -28,6 +28,7 @@ Your OAuth credentials are stored in the `/config/claude-config` directory and w
 | `enable_ha_mcp` | `true` | Enable Home Assistant MCP server integration |
 | `dangerously_skip_permissions` | `false` | **Read the warning below before enabling.** Launch Claude with `--dangerously-skip-permissions`, which disables all interactive tool-use confirmations. |
 | `extra_claude_flags` | `""` | Free-form CLI flags appended to every `claude` invocation (e.g. `--model claude-opus-4-7 --verbose`). Useful for forward-compatibility with new Claude Code flags before this add-on exposes them as dedicated options. |
+| `oauth_code` | `""` | One-shot field for pasting the OAuth code claude asks for at first login, when browser paste is flaky. See "OAuth code injection" section below. |
 | `persistent_apk_packages` | `[]` | APK packages to install on every startup |
 | `persistent_pip_packages` | `[]` | Python packages to install on every startup |
 
@@ -110,6 +111,43 @@ Claude command) where the line is parsed by a real shell.
 If the flag you want is `--dangerously-skip-permissions`, prefer the dedicated
 `dangerously_skip_permissions` checkbox above so the warning banner is logged
 on startup.
+
+### About `oauth_code` (one-shot OAuth helper)
+
+Claude's first-time OAuth flow asks you to paste a long code into its TUI
+prompt. Browser-side paste (Cmd+V / right-click → Paste) into a ttyd terminal
+is unreliable — long strings get truncated, special characters get mangled,
+and the bracketed-paste protocol doesn't always survive the
+ttyd → tmux → claude chain. This field is a workaround for that single
+moment.
+
+**Workflow:**
+
+1. Open the add-on. Claude prints a URL like `https://claude.com/cai/oauth/authorize?...`.
+2. Open the URL on your Mac, authorize, copy the resulting code.
+3. In Home Assistant, go to **Settings → Add-ons → Claude Terminal → Configuration**.
+4. Paste the code into the **OAuth code** field.
+5. Click **SAVE** — **do NOT click "Restart"**.
+6. Within ~3 seconds, the field clears itself, claude completes auth, and the
+   terminal shows the normal claude UI.
+
+**How it works:** a background poller running inside the add-on reads
+`/addons/self/info` from the Supervisor every 2 seconds. When it sees a
+non-empty `oauth_code`, it `tmux send-keys` the value into the running
+claude pane (so the same process that generated the URL — and is holding the
+matching PKCE verifier in memory — receives it), then `POST`s a cleared
+options dict back to the Supervisor.
+
+**Why "Save, not Restart" matters:** the OAuth code is bound to the
+`code_challenge` claude sent to Anthropic when generating the URL, which is
+derived from a one-shot `code_verifier` claude keeps in memory. Restarting
+the add-on spawns a new claude with a new verifier, so your old code becomes
+useless and you'd need a fresh URL.
+
+If a restart happens for any reason while a code is pending, the field
+auto-clears on the next poll (because the new claude has a new verifier and
+the old code is junk). Just refresh the addon to grab the new URL and try
+again.
 
 ## Usage
 

@@ -35,6 +35,17 @@ configuration:
       Useful for new Claude Code flags before this add-on exposes them as
       dedicated options. Example: --model claude-opus-4-7. Values containing
       spaces inside a single argument are not supported — see DOCS.
+  oauth_code:
+    name: OAuth code (paste once, auto-clears)
+    description: >-
+      One-shot field for completing claude OAuth without dealing with
+      browser-paste quirks. Workflow — open the addon, claude prints an OAuth
+      URL; authorize on your Mac and copy the resulting code; paste it here
+      and click SAVE (do NOT restart). A background poller in the addon
+      reads this value from Supervisor every 2s, types it into the running
+      claude pane via tmux send-keys, and wipes the field for you. If you
+      restart instead of saving, claude regenerates its PKCE verifier and
+      your code becomes invalid — get a fresh URL and try again.
   persistent_apk_packages:
     name: Persistent APK packages
     description: >-
