@@ -5,9 +5,7 @@
 # Uses plain bash — no bashio dependency
 
 # Colors
-CYAN='\033[0;36m'
 GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
 TERRACOTTA='\033[38;2;217;119;87m'
 WHITE='\033[1;37m'
 BOLD='\033[1m'
@@ -44,6 +42,20 @@ show_welcome_banner() {
     echo -e "  ${TERRACOTTA}║${NC}   ${DIM}Home Assistant Add-on  ·  Powered by Claude Code CLI${NC}   ${TERRACOTTA}║${NC}"
     echo -e "  ${TERRACOTTA}║${NC}                                                          ${TERRACOTTA}║${NC}"
     echo -e "  ${TERRACOTTA}╚══════════════════════════════════════════════════════════╝${NC}"
+}
+
+# Show which Claude Code binary this terminal will run (the add-on keeps a
+# self-updating native install in /data; /usr/local|/usr is the bundled copy)
+show_claude_version() {
+    local claude_path claude_ver source_label
+    claude_path=$(command -v claude 2>/dev/null || echo "not installed")
+    claude_ver=$(claude --version 2>/dev/null | awk '{print $1; exit}')
+    case "$claude_path" in
+        /data/*) source_label="native install, auto-updating" ;;
+        *)       source_label="bundled with add-on image" ;;
+    esac
+    echo -e "  ${DIM}Claude Code ${claude_ver:-unknown}  ·  ${claude_path}${NC}"
+    echo -e "  ${DIM}(${source_label})${NC}"
 }
 
 show_whats_new() {
@@ -85,6 +97,7 @@ main() {
     last_seen=$(get_last_seen_version)
 
     show_welcome_banner "$current_version"
+    show_claude_version
     show_whats_new "$current_version" "$last_seen"
 
     echo ""

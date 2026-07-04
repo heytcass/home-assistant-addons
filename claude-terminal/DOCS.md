@@ -27,8 +27,44 @@ Your OAuth credentials are stored in the `/config/claude-config` directory and w
 | `auto_launch_claude` | `true` | Automatically start Claude when opening the terminal |
 | `enable_ha_mcp` | `true` | Enable Home Assistant MCP server integration |
 | `claude_auto_update` | `true` | Keep Claude Code current via a persistent native install in `/data` |
+| `dangerously_skip_permissions` | `false` | Launch Claude without permission prompts (see security note below) |
+| `claude_extra_args` | `""` | Extra flags appended to every Claude launch, e.g. `--continue` |
 | `persistent_apk_packages` | `[]` | APK packages to install on every startup |
 | `persistent_pip_packages` | `[]` | Python packages to install on every startup |
+
+### Skipping Permission Prompts
+
+With `dangerously_skip_permissions: true`, Claude is launched with
+`--dangerously-skip-permissions` and will edit files and run commands without
+asking first. Because the add-on runs as root, the option also sets
+`IS_SANDBOX=1`, which Claude Code requires before it accepts the flag for the
+root user.
+
+**Security note:** combined with the Home Assistant MCP integration and the
+`/config` mount, this gives Claude unattended control over your Home Assistant
+configuration and devices. Only enable it if you understand and accept that.
+Claude shows a one-time acceptance dialog on first launch; your acceptance is
+stored in `/data` and persists.
+
+### Extra Launch Flags
+
+`claude_extra_args` is appended to the Claude command used by auto-launch and
+by the session picker's standard modes. Examples: `--continue` to always
+resume the most recent conversation, or `--model claude-sonnet-5` to pin a
+model. Keep it to simple space-separated flags (no quotes).
+
+### Checking Which Claude Code Version Is Running
+
+You don't need shell access to verify the running version:
+
+- The welcome banner shows the Claude Code version and whether it is the
+  native install or the bundled copy.
+- The add-on log (Settings → Add-ons → Claude Terminal → Log) prints
+  `Active Claude Code: <path> <version>` at startup.
+- Inside Claude, `/status` shows the version, and `!` runs shell commands
+  (e.g. `!command -v claude`).
+- For a real shell, set `auto_launch_claude: false` and pick
+  "Drop to bash shell" in the session picker.
 
 ## Keeping Claude Code Up to Date
 

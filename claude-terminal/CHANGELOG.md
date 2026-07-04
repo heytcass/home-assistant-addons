@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.3.0
+## 2.3.1
 
 ### ✨ New Features
 - **Claude Code stays up to date** (`claude_auto_update`, enabled by default): The add-on now installs the official native Claude Code build into `/data` on first startup and checks for updates in the background on every restart
@@ -8,10 +8,14 @@
   - Native install is used on amd64/aarch64; armv7 (no native builds) and offline starts fall back to the bundled npm copy
   - Set `claude_auto_update: false` to keep using the bundled version
 - **Startup hooks**: Shell scripts in `/data/init.d/*.sh` are sourced during startup, giving users a persistent way to customize the ephemeral container (environment variables, `PATH`, tool setup) — following the same philosophy as `persistent_apk_packages`
+- **`dangerously_skip_permissions` option** (disabled by default): Launch Claude with `--dangerously-skip-permissions` so it never prompts before running tools. Sets `IS_SANDBOX=1`, which Claude Code requires before accepting the flag as root. Read the security note in the documentation before enabling
+- **`claude_extra_args` option**: Extra command-line flags appended to every Claude launch (auto-launch and session picker), e.g. `--continue` or `--model claude-sonnet-5`
+- **Welcome banner shows the Claude Code version** and whether it is the self-updating native install or the copy bundled in the image — no shell access needed to verify what is running
 
 ### 🛠️ Technical Details
-- `$HOME/.local/bin` (i.e. `/data/home/.local/bin`) is now prepended to `PATH`, so a persistent native Claude install takes precedence over `/usr/local/bin/claude` everywhere: auto-launch, session picker, auth helper, and MCP setup all invoke `claude` unqualified
+- `$HOME/.local/bin` (i.e. `/data/home/.local/bin`) is now prepended to `PATH`, so a persistent native Claude install takes precedence over the bundled npm copy everywhere: auto-launch, session picker, auth helper, and MCP setup all invoke `claude` unqualified
 - First-time native install probes connectivity first and is capped at 5 minutes; subsequent update checks run in the background and never delay startup
+- The add-on log reports the active binary at startup: `Active Claude Code: /data/home/.local/bin/claude 2.1.201`
 
 ## 2.2.2
 

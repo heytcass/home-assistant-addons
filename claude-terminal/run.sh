@@ -237,6 +237,33 @@ update_claude_native() {
     bashio::log.info "Active Claude Code: $(command -v claude || echo 'not found') $(claude --version 2>/dev/null || echo '(version unavailable)')"
 }
 
+# Assemble extra launch flags for claude, exported as CLAUDE_LAUNCH_ARGS so
+# both the auto-launch command and the session picker apply them consistently.
+setup_claude_launch_args() {
+    local launch_args=""
+
+    # Opt-in bypass of Claude Code's permission prompts. Claude refuses this
+    # flag for the root user unless IS_SANDBOX=1 marks the environment as a
+    # disposable container, which this add-on is.
+    if bashio::config.true 'dangerously_skip_permissions'; then
+        bashio::log.warning "dangerously_skip_permissions is enabled: Claude will not ask before running tools"
+        export IS_SANDBOX=1
+        launch_args="--dangerously-skip-permissions"
+    fi
+
+    local extra_args
+    extra_args=$(bashio::config 'claude_extra_args' '')
+    if [ -n "$extra_args" ] && [ "$extra_args" != "null" ]; then
+        launch_args="${launch_args} ${extra_args}"
+    fi
+
+    CLAUDE_LAUNCH_ARGS=$(echo "$launch_args" | xargs)
+    export CLAUDE_LAUNCH_ARGS
+    if [ -n "$CLAUDE_LAUNCH_ARGS" ]; then
+        bashio::log.info "Claude launch args: ${CLAUDE_LAUNCH_ARGS}"
+    fi
+}
+
 # Source user-provided init hooks from /data/init.d (persists across restarts).
 # Escape hatch for customizing the ephemeral container at startup, e.g.
 # exporting environment variables or adjusting PATH before ttyd launches.
@@ -344,9 +371,15 @@ get_claude_launch_command() {
         welcome_prefix="welcome; "
     fi
 
+    # Apply configured launch flags (see setup_claude_launch_args)
+    local claude_cmd="claude"
+    if [ -n "${CLAUDE_LAUNCH_ARGS:-}" ]; then
+        claude_cmd="claude ${CLAUDE_LAUNCH_ARGS}"
+    fi
+
     if [ "$auto_launch_claude" = "true" ]; then
         # Use tmux for session persistence - attach to existing or create new
-        echo "${welcome_prefix}tmux new-session -A -s claude 'claude'"
+        echo "${welcome_prefix}tmux new-session -A -s claude '${claude_cmd}'"
     else
         # Session picker manages its own tmux sessions internally,
         # so do NOT wrap it in tmux (that would cause nested tmux errors)
@@ -355,7 +388,7 @@ get_claude_launch_command() {
         else
             # Fallback if session picker is missing
             bashio::log.warning "Session picker not found, falling back to auto-launch"
-            echo "${welcome_prefix}tmux new-session -A -s claude 'claude'"
+            echo "${welcome_prefix}tmux new-session -A -s claude '${claude_cmd}'"
         fi
     fi
 }
@@ -436,6 +469,7 @@ main() {
     setup_session_picker
     install_persistent_packages
     update_claude_native
+    setup_claude_launch_args
     source_user_init_hooks
     generate_ha_context
     setup_ha_mcp
