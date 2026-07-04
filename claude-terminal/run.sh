@@ -35,6 +35,11 @@ init_environment() {
     export ANTHROPIC_CONFIG_DIR="$claude_config_dir"
     export ANTHROPIC_HOME="/data"
 
+    # Prefer a persistent native Claude Code install under /data over the npm
+    # copy baked into the image (frozen at whatever version was current when
+    # the image was built). Propagates through ttyd -> bash -> tmux -> claude.
+    export PATH="${data_home}/.local/bin:${PATH}"
+
     # Migrate any existing authentication files from legacy locations
     migrate_legacy_auth_files "$claude_config_dir"
 
@@ -181,6 +186,69 @@ install_persistent_packages() {
 
     if [ -z "$apk_packages" ] && [ -z "$pip_packages" ]; then
         bashio::log.info "No persistent packages configured"
+    fi
+}
+
+# Install or update a persistent native Claude Code build under /data.
+# The npm copy baked into the image is frozen at image build time and the
+# container filesystem is recreated on every restart, so a native install in
+# /data is the only way to keep Claude Code current across restarts.
+update_claude_native() {
+    local claude_auto_update
+    claude_auto_update=$(bashio::config 'claude_auto_update' 'true')
+
+    if [ "$claude_auto_update" != "true" ]; then
+        bashio::log.info "Claude Code auto-update disabled in configuration"
+        return 0
+    fi
+
+    # Native builds are only published for x86_64/aarch64; other architectures
+    # (armv7) keep the npm copy bundled in the image
+    local machine
+    machine=$(uname -m)
+    case "$machine" in
+        x86_64|aarch64) ;;
+        *)
+            bashio::log.info "No native Claude Code build for ${machine}, using bundled npm version"
+            return 0
+            ;;
+    esac
+
+    if [ -x "${HOME}/.local/bin/claude" ]; then
+        # Native install already present: check for updates in the background
+        # so startup is never delayed
+        bashio::log.info "Native Claude Code found, checking for updates in background..."
+        (timeout 300 "${HOME}/.local/bin/claude" update >/dev/null 2>&1 || true) &
+    else
+        # First run: install the native build (one-time cost). Probe
+        # connectivity first so an offline boot is not delayed.
+        if ! curl -fsSL -m 10 -o /dev/null https://claude.ai/install.sh 2>/dev/null; then
+            bashio::log.warning "Cannot reach claude.ai, using bundled npm Claude Code for now"
+            return 0
+        fi
+        bashio::log.info "Installing native Claude Code build to ${HOME}/.local/bin (persists in /data)..."
+        if timeout 300 bash -c "curl -fsSL https://claude.ai/install.sh | bash" >/dev/null 2>&1; then
+            bashio::log.info "Native Claude Code installed successfully"
+        else
+            bashio::log.warning "Native Claude Code install failed, using bundled npm version"
+        fi
+    fi
+
+    bashio::log.info "Active Claude Code: $(command -v claude || echo 'not found') $(claude --version 2>/dev/null || echo '(version unavailable)')"
+}
+
+# Source user-provided init hooks from /data/init.d (persists across restarts).
+# Escape hatch for customizing the ephemeral container at startup, e.g.
+# exporting environment variables or adjusting PATH before ttyd launches.
+source_user_init_hooks() {
+    if [ -d /data/init.d ]; then
+        local hook
+        for hook in /data/init.d/*.sh; do
+            [ -r "$hook" ] || continue
+            bashio::log.info "Sourcing user init hook: ${hook}"
+            # shellcheck disable=SC1090
+            source "$hook" || bashio::log.warning "Init hook failed: ${hook}"
+        done
     fi
 }
 
@@ -367,6 +435,8 @@ main() {
     install_tools
     setup_session_picker
     install_persistent_packages
+    update_claude_native
+    source_user_init_hooks
     generate_ha_context
     setup_ha_mcp
     start_web_terminal

@@ -26,8 +26,45 @@ Your OAuth credentials are stored in the `/config/claude-config` directory and w
 |--------|---------|-------------|
 | `auto_launch_claude` | `true` | Automatically start Claude when opening the terminal |
 | `enable_ha_mcp` | `true` | Enable Home Assistant MCP server integration |
+| `claude_auto_update` | `true` | Keep Claude Code current via a persistent native install in `/data` |
 | `persistent_apk_packages` | `[]` | APK packages to install on every startup |
 | `persistent_pip_packages` | `[]` | Python packages to install on every startup |
+
+## Keeping Claude Code Up to Date
+
+The container image bundles an npm copy of Claude Code that is frozen at
+whatever version was current when the image was built. Because the Supervisor
+recreates the container filesystem on every restart, updating that copy
+in-place does not survive a restart.
+
+With `claude_auto_update: true` (the default), the add-on instead installs the
+official native Claude Code build into `/data` (which persists across restarts
+and add-on updates) on first startup, and checks for updates in the background
+on every subsequent startup. The native install takes precedence over the
+bundled npm copy, which remains as a fallback for offline starts and for
+architectures without native builds (armv7).
+
+Set `claude_auto_update: false` to stop installing or updating the native
+build. An existing native install in `/data` continues to be used; remove
+`/data/home/.local/bin/claude` (from the terminal: `rm ~/.local/bin/claude`)
+to fall back to the bundled npm copy.
+
+## Startup Hooks
+
+Shell scripts placed in `/data/init.d/` (named `*.sh`) are sourced during
+add-on startup, after packages are installed and before the terminal launches.
+Because `/data` persists across restarts, this is the supported way to
+customize the otherwise ephemeral container — for example exporting
+environment variables, adjusting `PATH`, or pinning a specific Claude Code
+install:
+
+```bash
+# /data/init.d/10-custom-env.sh
+export MY_VARIABLE="value"
+```
+
+Hooks run as root inside the add-on container; a failing hook logs a warning
+but does not prevent startup.
 
 ## Usage
 

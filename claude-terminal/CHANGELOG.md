@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.3.0
+
+### ✨ New Features
+- **Claude Code stays up to date** (`claude_auto_update`, enabled by default): The add-on now installs the official native Claude Code build into `/data` on first startup and checks for updates in the background on every restart
+  - The npm copy baked into the image is frozen at whatever version was current when the image was built on your machine; the native install in `/data` persists across restarts and keeps itself current
+  - Native install is used on amd64/aarch64; armv7 (no native builds) and offline starts fall back to the bundled npm copy
+  - Set `claude_auto_update: false` to keep using the bundled version
+- **Startup hooks**: Shell scripts in `/data/init.d/*.sh` are sourced during startup, giving users a persistent way to customize the ephemeral container (environment variables, `PATH`, tool setup) — following the same philosophy as `persistent_apk_packages`
+
+### 🛠️ Technical Details
+- `$HOME/.local/bin` (i.e. `/data/home/.local/bin`) is now prepended to `PATH`, so a persistent native Claude install takes precedence over `/usr/local/bin/claude` everywhere: auto-launch, session picker, auth helper, and MCP setup all invoke `claude` unqualified
+- First-time native install probes connectivity first and is capped at 5 minutes; subsequent update checks run in the background and never delay startup
+
 ## 2.2.2
 
 ### 🐛 Bug Fixes
