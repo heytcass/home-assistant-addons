@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.3.2
+
+### 🐛 Bug Fixes
+- Fixed welcome banner border misalignment on the version line (padding was 3 columns short)
+
 ## 2.3.1
 
 ### ✨ New Features

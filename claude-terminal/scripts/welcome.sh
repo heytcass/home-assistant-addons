@@ -34,7 +34,7 @@ save_version() {
 show_welcome_banner() {
     local version="$1"
     local ver_padding
-    ver_padding=$(printf '%*s' $((34 - ${#version})) '')
+    ver_padding=$(printf '%*s' $((37 - ${#version})) '')
     echo ""
     echo -e "  ${TERRACOTTA}╔══════════════════════════════════════════════════════════╗${NC}"
     echo -e "  ${TERRACOTTA}║${NC}                                                          ${TERRACOTTA}║${NC}"
