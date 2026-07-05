@@ -26,6 +26,7 @@ Your OAuth credentials are stored in the `/config/claude-config` directory and w
 |--------|---------|-------------|
 | `auto_launch_claude` | `true` | Automatically start Claude when opening the terminal |
 | `enable_ha_mcp` | `true` | Enable Home Assistant MCP server integration |
+| `ha_mcp_version` | `"7.9.0"` | Version of [ha-mcp](https://github.com/homeassistant-ai/ha-mcp) to run (armv7 is capped at 3.5.1 — newer releases need Python 3.13, unavailable there) |
 | `claude_auto_update` | `true` | Keep Claude Code current via a persistent native install in `/data` |
 | `dangerously_skip_permissions` | `false` | Launch Claude without permission prompts (see security note below) |
 | `claude_extra_args` | `""` | Extra flags appended to every Claude launch, e.g. `--continue` |

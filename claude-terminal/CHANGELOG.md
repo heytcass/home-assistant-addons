@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.3.3
+
+### 🐛 Bug Fixes
+- **Fixed "WebSocket not connected" in ha-mcp template rendering**: Bumped the pinned ha-mcp from 3.5.1 (four major versions behind) to 7.9.0. REST-based tools worked on 3.5.1, but WebSocket-based tools like `ha_eval_template` failed; the WebSocket path through the Supervisor proxy was verified healthy, isolating the bug to the old ha-mcp client. ha-mcp 7.9.0 exposes 77 tools (verified via MCP `tools/list`)
+
+### ✨ New Features
+- **`ha_mcp_version` option** (default `"7.9.0"`): The ha-mcp version is now configurable from the add-on options, so future bumps don't require an add-on update
+
+### 🛠️ Technical Details
+- Every ha-mcp release after 3.5.1 requires CPython 3.13 exactly (`>=3.13,<3.14`), which no Alpine release ships (3.21–3.23 have 3.12, 3.24 has 3.14) — this is why the pin was stuck at 3.5.1
+- uv now comes from the official installer (0.11.26) instead of the outdated Alpine package (0.5.31), because only recent uv can download managed musl Python builds; `uvx --python 3.13` provisions CPython 3.13 into `/data` (persistent)
+- The uv caches are pre-warmed in the background at startup so the first MCP connection doesn't hit the client startup timeout
+- armv7 has no managed musl Python builds and stays on ha-mcp 3.5.1 (the last release supporting the system Python)
+
 ## 2.3.2
 
 ### 🐛 Bug Fixes

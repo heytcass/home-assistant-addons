@@ -30,9 +30,37 @@ configure_ha_mcp_server() {
         return 0
     fi
 
+    # Resolve the ha-mcp version to install (configurable via add-on options
+    # so it can be bumped without waiting for an add-on release)
+    local ha_mcp_version
+    ha_mcp_version=$(bashio::config 'ha_mcp_version' '7.9.0')
+    if [ -z "$ha_mcp_version" ] || [ "$ha_mcp_version" = "null" ]; then
+        ha_mcp_version="7.9.0"
+    fi
+
+    # ha-mcp >=3.6 requires CPython 3.13 exactly (requires-python >=3.13,<3.14)
+    # while Alpine ships 3.12, so let uv provision a managed musl Python 3.13.
+    # It lands under XDG_DATA_HOME (/data), so it persists across restarts.
+    # No managed musl builds exist for armv7 - stay on ha-mcp 3.5.1 there,
+    # the last release that runs on the system Python.
+    local machine
+    local uvx_python_args=()
+    machine=$(uname -m)
+    case "$machine" in
+        x86_64|aarch64)
+            uvx_python_args=(--python 3.13)
+            ;;
+        *)
+            if [ "$ha_mcp_version" != "3.5.1" ]; then
+                bashio::log.warning "No managed Python 3.13 builds for ${machine}; using ha-mcp@3.5.1"
+                ha_mcp_version="3.5.1"
+            fi
+            ;;
+    esac
+
     # Configure Claude Code to use ha-mcp
     # The MCP server will connect to Home Assistant via the Supervisor API
-    bashio::log.info "Configuring Claude Code MCP server for Home Assistant..."
+    bashio::log.info "Configuring Claude Code MCP server for Home Assistant (ha-mcp@${ha_mcp_version})..."
 
     # Remove existing ha-mcp configuration if present (to ensure clean state)
     claude mcp remove home-assistant 2>/dev/null || true
@@ -45,13 +73,19 @@ configure_ha_mcp_server() {
     if claude mcp add home-assistant \
         --env "HOMEASSISTANT_URL=http://supervisor/core" \
         --env "HOMEASSISTANT_TOKEN=${SUPERVISOR_TOKEN}" \
-        -- uvx --index-strategy unsafe-best-match ha-mcp@3.5.1; then
+        -- uvx "${uvx_python_args[@]}" --index-strategy unsafe-best-match "ha-mcp@${ha_mcp_version}"; then
         bashio::log.info "ha-mcp configured successfully!"
         bashio::log.info "Claude Code now has access to Home Assistant via MCP"
         bashio::log.info "Available tools: entity control, automations, scripts, history, and more"
+
+        # Pre-warm the uv caches in the background: the first launch downloads
+        # Python 3.13 and the ha-mcp package into /data, which could otherwise
+        # exceed the MCP client startup timeout on first connection
+        (timeout 600 uvx "${uvx_python_args[@]}" --index-strategy unsafe-best-match \
+            "ha-mcp@${ha_mcp_version}" --help </dev/null >/dev/null 2>&1 || true) &
     else
         bashio::log.warning "Failed to configure ha-mcp - continuing without MCP integration"
-        bashio::log.warning "You can manually run: claude mcp add home-assistant --env HOMEASSISTANT_URL=http://supervisor/core --env HOMEASSISTANT_TOKEN=\$SUPERVISOR_TOKEN -- uvx --index-strategy unsafe-best-match ha-mcp@3.5.1"
+        bashio::log.warning "You can manually run: claude mcp add home-assistant --env HOMEASSISTANT_URL=http://supervisor/core --env HOMEASSISTANT_TOKEN=\$SUPERVISOR_TOKEN -- uvx ${uvx_python_args[*]} --index-strategy unsafe-best-match ha-mcp@${ha_mcp_version}"
     fi
 }
 
