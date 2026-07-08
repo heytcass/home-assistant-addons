@@ -1,5 +1,26 @@
 # Changelog
 
+## 2.5.0
+
+### 📦 Prebuilt images
+Installs and updates now pull prebuilt images from GHCR
+(`ghcr.io/heytcass/{arch}-addon-claude-terminal`) instead of building
+locally on your Home Assistant box. This means:
+- **No more build OOM failures on small systems** (#56)
+- **The add-on image is no longer exported into HA backups** — combined with
+  the 2.3.0 npm-cache fix, this fully resolves the backup bloat report (#103)
+- Much faster installs and updates
+
+### ⚠️ Breaking: armv7 (32-bit ARM) support dropped
+Home Assistant's builder and HAOS have dropped 32-bit ARM, and neither
+native Claude Code builds nor uv-managed Python exist for it. Existing
+armv7 installs keep working on 2.4.x but won't be offered this update.
+aarch64 (Raspberry Pi 3/4/5 on 64-bit HAOS) is fully supported.
+
+### 🛠️ Cleanup
+- Removed now-dead 32-bit ARM fallback paths from startup and MCP setup
+- Fixed the `image.source` label to point at this repository
+
 ## 2.4.0
 
 ### ✨ ha-mcp 3.5.1 → 7.11.0 (four major versions)

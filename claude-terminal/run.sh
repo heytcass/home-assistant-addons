@@ -136,14 +136,6 @@ update_claude() {
         return 0
     fi
 
-    # No native Claude Code builds exist for 32-bit ARM
-    case "$(uname -m)" in
-        armv7l|armv6l|armhf)
-            bashio::log.info "No native Claude Code builds for $(uname -m); using bundled copy"
-            return 0
-            ;;
-    esac
-
     if [ -x "$HOME/.local/bin/claude" ]; then
         bashio::log.info "Persistent Claude Code found; checking for updates in background"
         ("$HOME/.local/bin/claude" update >/dev/null 2>&1 || true) &

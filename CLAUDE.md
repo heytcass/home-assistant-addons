@@ -44,14 +44,14 @@ curl -X GET http://localhost:7681/
 ### Add-on Structure (claude-terminal/)
 - **config.yaml** - Home Assistant add-on configuration (options schema, ingress, volume maps)
 - **Dockerfile** - Alpine-based image; all runtime packages (ttyd, tmux, nodejs, uv, ...) are baked in so startup never depends on the network
-- **build.yaml** - Multi-architecture build configuration (amd64, aarch64, armv7)
+- **build.yaml** - Multi-architecture build configuration (amd64, aarch64); images are prebuilt on GHCR and pulled by the Supervisor
 - **run.sh** - Startup script: environment/persistence setup, background Claude auto-update, ttyd launch
 - **scripts/** - Support scripts copied to `/opt/scripts/` (welcome banner, health check, HA context, MCP setup, persist-install, tmux config)
 
 ### Container Execution Flow
 1. `init_environment` — point HOME/XDG at `/data` (persistent), prepend `/data/home/.local/bin` to PATH, clean legacy npm cache, migrate old credentials
 2. `setup_commands` — install `welcome`, `persist-install`, `ha-context`, `claude-doctor` into `/usr/local/bin`
-3. `update_claude` — background install/update of the native Claude Code build into `/data` (skipped on armv7 or when `claude_auto_update: false`)
+3. `update_claude` — background install/update of the native Claude Code build into `/data` (skipped when `claude_auto_update: false`)
 4. `install_persistent_packages` — user-configured apk/pip packages
 5. `generate_ha_context` — background CLAUDE.md generation via Supervisor API
 6. `setup_ha_mcp` — register ha-mcp with `claude mcp add`
@@ -108,6 +108,6 @@ Note: `bashio::config` reads `/data/options.json`; outside a real Supervisor env
 - `npm_config_cache=/tmp/npm-cache` (image env — keeps caches out of HA backups)
 
 ### Important Constraints
-- Add-on targets Home Assistant OS (Alpine Linux base); armv7 has no native Claude Code builds
+- Add-on targets Home Assistant OS (Alpine Linux base); amd64 + aarch64 only (32-bit ARM dropped in 2.5.0)
 - Must handle credential/session persistence across container restarts
 - `/data` is included in HA backups — never let caches or reproducible artifacts accumulate there

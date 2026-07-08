@@ -26,7 +26,7 @@ Your credentials are stored under `/data` and persist across restarts and add-on
 | `claude_extra_args` | `""` | Extra flags appended to every Claude launch, e.g. `--model claude-sonnet-5`. Values are split on spaces; quoted multi-word arguments are not supported. |
 | `ha_smart_context` | `true` | Generate a CLAUDE.md with your HA system info so Claude knows your setup. |
 | `enable_ha_mcp` | `true` | Register the [ha-mcp](https://github.com/homeassistant-ai/ha-mcp) MCP server so Claude can control Home Assistant directly. |
-| `ha_mcp_version` | `"7.11.0"` | ha-mcp release to run. 32-bit ARM ignores this and stays on 3.5.1 (no Python 3.13 builds for that platform). |
+| `ha_mcp_version` | `"7.11.0"` | ha-mcp release to run. |
 | `persistent_apk_packages` | `[]` | APK packages reinstalled on every startup. |
 | `persistent_pip_packages` | `[]` | Python packages reinstalled on every startup. |
 
