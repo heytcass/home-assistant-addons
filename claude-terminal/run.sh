@@ -109,7 +109,8 @@ setup_commands() {
         "welcome:/opt/scripts/welcome.sh" \
         "persist-install:/opt/scripts/persist-install.sh" \
         "ha-context:/opt/scripts/ha-context.sh" \
-        "claude-doctor:/opt/scripts/health-check.sh"; do
+        "claude-doctor:/opt/scripts/health-check.sh" \
+        "claude-login-url:/opt/scripts/claude-login-url.sh"; do
         name="${entry%%:*}"
         script="${entry#*:}"
         if [ -f "$script" ]; then
