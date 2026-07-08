@@ -40,6 +40,7 @@ claude          # start Claude Code
 claude -c       # continue the most recent conversation
 claude -r       # pick a past conversation to resume
 claude-doctor   # diagnose network, auth, and environment issues
+claude-login-url   # save the OAuth login URL to /config (see Troubleshooting)
 persist-install apk htop   # install packages that survive restarts
 ha-context      # refresh the Home Assistant context file
 ```
@@ -72,7 +73,7 @@ Disable it with `enable_ha_mcp: false` if you don't want Claude to have this acc
 
 ## Troubleshooting
 
-- **Can't copy the OAuth login URL**: at Claude's login prompt, press `c` to copy the URL to your clipboard (requires accessing HA over HTTPS). Alternatively, drag over the URL with the mouse — tmux copies it as a single joined line on release. On plain `http://`, use Shift+drag and rejoin the wrapped line after pasting. Don't click the link directly: the browser's link detection truncates URLs that wrap across lines.
+- **Can't copy the OAuth login URL / "Authorization failed – Invalid request format"**: the browser terminal's clipboard path truncates very long payloads, and the login URL is one — a cut-off `state` parameter causes exactly that authorization error. Reliable path: while the login prompt is showing, open a second tmux window (`Ctrl+B` then `C`), run `claude-login-url`, and open `/config/claude-login-url.txt` with the File Editor add-on (or over Samba) — copy the URL from there. Switch back with `Ctrl+B` then `L` to paste the resulting code. Delete the file when done. Don't click the link in the terminal directly: link detection truncates URLs that wrap across lines.
 - **Claude exits immediately or behaves oddly**: restart the add-on so the background auto-updater can fetch the latest Claude Code; check the add-on log for update messages.
 - **Diagnostics**: run `claude-doctor` in the terminal for connectivity, memory, and environment checks.
 - **Authentication problems**: run `claude /logout` inside Claude, then log in again.

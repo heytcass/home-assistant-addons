@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.3.2
+
+### 🐛 Bug Fixes
+- **New `claude-login-url` command**: saves the OAuth login URL to
+  `/config/claude-login-url.txt` so it can be copied via the File Editor or
+  Samba. The browser terminal's OSC 52 clipboard path truncates payloads at
+  roughly 400 characters — shorter than the login URL — which cut off the
+  `state` parameter and made authorization fail with "Invalid request format".
+  This gives login a path that bypasses the terminal clipboard entirely.
+- **Auth status indicator now checks token expiry**: a leftover credentials
+  file with an expired token shows orange instead of green
+
 ## 2.3.1
 
 ### 🐛 Bug Fixes

@@ -8,11 +8,23 @@ auth_status() {
     local config_dir="${ANTHROPIC_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/claude}"
 
     # Current Claude Code stores OAuth credentials in ~/.claude; older
-    # versions used the config dir
-    if [ -f "$HOME/.claude/.credentials.json" ] || \
-       [ -f "$config_dir/.credentials.json" ] || [ -f "$config_dir/credentials.json" ]; then
-        echo "#[fg=colour114]Auth"
-    elif [ -f "$config_dir/settings.json" ] && \
+    # versions used the config dir. A file with an expired token shows
+    # orange, not green — existence alone doesn't mean logged in.
+    local cred
+    for cred in "$HOME/.claude/.credentials.json" \
+                "$config_dir/.credentials.json" "$config_dir/credentials.json"; do
+        [ -f "$cred" ] || continue
+        local expires_at
+        expires_at=$(jq -r '.claudeAiOauth.expiresAt // empty' "$cred" 2>/dev/null)
+        if [ -n "$expires_at" ] && [ "$expires_at" -lt "$(( $(date +%s) * 1000 ))" ] 2>/dev/null; then
+            echo "#[fg=colour208]Auth"
+        else
+            echo "#[fg=colour114]Auth"
+        fi
+        return
+    done
+
+    if [ -f "$config_dir/settings.json" ] && \
        grep -q '"apiKey"\|"oauthToken"\|"sessionKey"' "$config_dir/settings.json" 2>/dev/null; then
         echo "#[fg=colour114]Auth"
     else

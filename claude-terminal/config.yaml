@@ -1,7 +1,7 @@
 ---
 name: "Claude Terminal"
 description: "Web terminal with Anthropic's Claude Code CLI and persistent auth"
-version: "2.3.1"
+version: "2.3.2"
 slug: "claude_terminal"
 init: false
 
