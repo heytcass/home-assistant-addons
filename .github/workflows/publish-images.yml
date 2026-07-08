@@ -36,7 +36,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push add-on image
-        uses: home-assistant/builder@2026.06.0
+        uses: home-assistant/builder@2026.02.1
         with:
           args: |
             --${{ matrix.arch }} \
