@@ -24,7 +24,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [aarch64, amd64, armv7]
+        # armv7 is not supported by current HA builder releases (32-bit ARM
+        # was dropped upstream); armv7 installs keep building locally
+        arch: [aarch64, amd64]
     steps:
       - uses: actions/checkout@v4
 
