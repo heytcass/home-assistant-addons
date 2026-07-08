@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.3.1
+
+### 🐛 Bug Fixes
+- **Fixed copying (including the OAuth login URL) not reaching the clipboard**:
+  ttyd's `xterm-256color` terminfo lacks the `Ms` capability, so tmux never
+  actually emitted OSC 52 — mouse-drag copies landed in tmux's internal buffer
+  only, which broke the first-login flow introduced alongside 2.3.0's mouse
+  mode. tmux is now told the OSC 52 escape sequence explicitly; drag-copy and
+  Claude's login "press `c` to copy" both reach the browser clipboard (HTTPS
+  required by browsers), and wrapped URLs are copied as a single joined line
+- Documented Shift+drag (native browser selection, bypasses tmux) as the
+  fallback for plain-`http://` access, plus a login troubleshooting section
+
 ## 2.3.0
 
 Back to basics: the add-on's job is Claude Code in a terminal, done reliably.

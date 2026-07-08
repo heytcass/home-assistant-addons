@@ -47,7 +47,8 @@ ha-context      # refresh the Home Assistant context file
 ### Terminal tips
 
 - **Scrolling**: use the mouse wheel — tmux copy-mode opens automatically. Press `q` to jump back to the bottom.
-- **Copying**: select text with the mouse; it's copied to your clipboard automatically (OSC 52).
+- **Copying**: select text with the mouse; on release it's copied to your clipboard (OSC 52). Long wrapped lines (like OAuth URLs) are joined back into one line automatically. Note: browsers only allow clipboard writes on secure pages — if you access Home Assistant over plain `http://`, use Shift+drag instead.
+- **Shift+drag**: bypasses tmux and gives you the browser's native text selection (copy with `Ctrl+C` / right-click). Works everywhere, but wrapped lines are copied with line breaks — rejoin them by hand.
 - **Pasting**: use `Ctrl+Shift+V` (or right-click, depending on browser).
 
 ### File access
@@ -71,6 +72,7 @@ Disable it with `enable_ha_mcp: false` if you don't want Claude to have this acc
 
 ## Troubleshooting
 
+- **Can't copy the OAuth login URL**: at Claude's login prompt, press `c` to copy the URL to your clipboard (requires accessing HA over HTTPS). Alternatively, drag over the URL with the mouse — tmux copies it as a single joined line on release. On plain `http://`, use Shift+drag and rejoin the wrapped line after pasting. Don't click the link directly: the browser's link detection truncates URLs that wrap across lines.
 - **Claude exits immediately or behaves oddly**: restart the add-on so the background auto-updater can fetch the latest Claude Code; check the add-on log for update messages.
 - **Diagnostics**: run `claude-doctor` in the terminal for connectivity, memory, and environment checks.
 - **Authentication problems**: run `claude /logout` inside Claude, then log in again.
