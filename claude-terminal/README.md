@@ -25,7 +25,7 @@ This add-on runs Anthropic's [Claude Code](https://docs.anthropic.com/en/docs/cl
 - **HA Smart Context**: Claude automatically knows your HA version, entities, and add-ons
 - **Broad file access**: `/config`, `/addon_configs`, and `/share` are mounted
 - **Persistent packages**: `persist-install` keeps your extra apk/pip tools across restarts
-- **Multi-architecture**: amd64, aarch64, and armv7
+- **Multi-architecture**: amd64 and aarch64 (prebuilt images pulled from GHCR)
 
 ## Installation
 
@@ -47,7 +47,7 @@ Works out of the box. All options:
 | `claude_extra_args` | `""` | Extra flags for every Claude launch |
 | `ha_smart_context` | `true` | Generate HA context file for Claude |
 | `enable_ha_mcp` | `true` | Home Assistant MCP server integration |
-| `ha_mcp_version` | `"7.11.0"` | ha-mcp release to run (armv7 stays on 3.5.1) |
+| `ha_mcp_version` | `"7.11.0"` | ha-mcp release to run |
 | `persistent_apk_packages` | `[]` | APK packages to install on startup |
 | `persistent_pip_packages` | `[]` | pip packages to install on startup |
 

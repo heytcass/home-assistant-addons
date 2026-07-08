@@ -32,37 +32,24 @@ configure_ha_mcp_server() {
     local version
     version=$(bashio::config 'ha_mcp_version' '7.11.0')
 
-    # ha-mcp >= 4.x requires CPython 3.13 exactly, which no Alpine release
-    # ships. uv provisions a managed musl 3.13 build instead (persisted under
-    # /data via XDG_DATA_HOME, so it downloads once). 32-bit ARM has no
-    # managed musl builds — stay on the last release that runs on the system
-    # Python 3.12 there.
-    local python_args=()
-    case "$(uname -m)" in
-        armv7l|armv6l|armhf)
-            version="3.5.1"
-            bashio::log.info "32-bit ARM detected - using ha-mcp ${version} on system Python"
-            ;;
-        *)
-            python_args=(--python 3.13)
-            ;;
-    esac
-
     # Remove existing ha-mcp configuration if present (to ensure clean state)
     claude mcp remove home-assistant 2>/dev/null || true
 
+    # ha-mcp >= 4.x requires CPython 3.13 exactly, which no Alpine release
+    # ships — uv provisions a managed musl 3.13 build (persisted under /data
+    # via XDG_DATA_HOME, so it downloads once).
     # --index-strategy unsafe-best-match: the HA wheels index doesn't carry
     # every version, so let uv consider all indexes (#77/#79)
     if claude mcp add home-assistant \
         --env "HOMEASSISTANT_URL=http://supervisor/core" \
         --env "HOMEASSISTANT_TOKEN=${SUPERVISOR_TOKEN}" \
-        -- uvx "${python_args[@]}" --index-strategy unsafe-best-match "ha-mcp@${version}"; then
+        -- uvx --python 3.13 --index-strategy unsafe-best-match "ha-mcp@${version}"; then
         bashio::log.info "ha-mcp ${version} configured for Claude Code"
 
         # Pre-warm the uv environment in the background (managed Python
         # download + dependency resolution) so the first MCP connection
         # doesn't hit the client startup timeout
-        (uvx "${python_args[@]}" --index-strategy unsafe-best-match \
+        (uvx --python 3.13 --index-strategy unsafe-best-match \
             --from "ha-mcp@${version}" python -c "" >/dev/null 2>&1 || true) &
         bashio::log.info "Pre-warming ha-mcp environment in background"
     else

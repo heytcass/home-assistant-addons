@@ -1,15 +1,19 @@
 ---
 name: "Claude Terminal"
 description: "Web terminal with Anthropic's Claude Code CLI and persistent auth"
-version: "2.4.0"
+version: "2.5.0"
 slug: "claude_terminal"
 init: false
 
-# Supported architectures
+# Prebuilt images on GHCR — the Supervisor pulls these instead of building
+# locally (no build OOM, no image blobs in backups). Tag = version below.
+image: "ghcr.io/heytcass/{arch}-addon-claude-terminal"
+
+# Supported architectures (armv7 dropped in 2.5.0: HAOS dropped 32-bit ARM,
+# and neither Claude Code native builds nor managed Python exist for it)
 arch:
   - aarch64
   - amd64
-  - armv7
 
 # External resources
 url: "https://github.com/heytcass/home-assistant-addons"
