@@ -1,6 +1,12 @@
 #!/usr/bin/with-contenv bashio
 
-# Enable strict error handling
+# Claude Terminal — Claude Code in a browser terminal (ttyd + tmux).
+#
+# Startup philosophy: everything the terminal needs is baked into the image,
+# and nothing on the boot path may depend on the network or block on input.
+# Network work (Claude updates, HA context generation) happens in the
+# background after the terminal is already available.
+
 set -e
 set -o pipefail
 
@@ -30,10 +36,18 @@ init_environment() {
     export XDG_CACHE_HOME="$cache_dir"
     export XDG_STATE_HOME="$state_dir"
     export XDG_DATA_HOME="/data/.local/share"
-    
+
     # Claude-specific environment variables
     export ANTHROPIC_CONFIG_DIR="$claude_config_dir"
     export ANTHROPIC_HOME="/data"
+
+    # The persistent native Claude install (see update_claude) must win over
+    # the npm copy bundled in the image
+    export PATH="$data_home/.local/bin:$PATH"
+
+    # Older versions let the npm cache pile up here, inflating HA backups by
+    # gigabytes (#103). The cache now lives in /tmp (npm_config_cache env).
+    rm -rf "$data_home/.npm"
 
     # Migrate any existing authentication files from legacy locations
     migrate_legacy_auth_files "$claude_config_dir"
@@ -42,14 +56,9 @@ init_environment() {
     if [ -f "/opt/scripts/tmux.conf" ]; then
         cp /opt/scripts/tmux.conf "$data_home/.tmux.conf"
         chmod 644 "$data_home/.tmux.conf"
-        bashio::log.info "tmux configuration installed to $data_home/.tmux.conf"
     fi
 
-    bashio::log.info "Environment initialized:"
-    bashio::log.info "  - Home: $HOME"
-    bashio::log.info "  - Config: $XDG_CONFIG_HOME"
-    bashio::log.info "  - Claude config: $ANTHROPIC_CONFIG_DIR"
-    bashio::log.info "  - Cache: $XDG_CACHE_HOME"
+    bashio::log.info "Environment initialized (HOME=${HOME})"
 }
 
 # One-time migration of existing authentication files
@@ -57,12 +66,10 @@ migrate_legacy_auth_files() {
     local target_dir="$1"
     local migrated=false
 
-    bashio::log.info "Checking for existing authentication files to migrate..."
-
     # Check common legacy locations
     local legacy_locations=(
         "/root/.config/anthropic"
-        "/root/.anthropic" 
+        "/root/.anthropic"
         "/config/claude-config"
         "/tmp/claude-config"
     )
@@ -70,19 +77,18 @@ migrate_legacy_auth_files() {
     for legacy_path in "${legacy_locations[@]}"; do
         if [ -d "$legacy_path" ] && [ "$(ls -A "$legacy_path" 2>/dev/null)" ]; then
             bashio::log.info "Migrating auth files from: $legacy_path"
-            
+
             # Copy files to new location
             if cp -r "$legacy_path"/* "$target_dir/" 2>/dev/null; then
                 # Set proper permissions
                 find "$target_dir" -type f -exec chmod 600 {} \;
-                
+
                 # Create compatibility symlink if this is a standard location
                 if [[ "$legacy_path" == "/root/.config/anthropic" ]] || [[ "$legacy_path" == "/root/.anthropic" ]]; then
                     rm -rf "$legacy_path"
                     ln -sf "$target_dir" "$legacy_path"
-                    bashio::log.info "Created compatibility symlink: $legacy_path -> $target_dir"
                 fi
-                
+
                 migrated=true
                 bashio::log.info "Migration completed from: $legacy_path"
             else
@@ -92,24 +98,69 @@ migrate_legacy_auth_files() {
     done
 
     if [ "$migrated" = false ]; then
-        bashio::log.info "No existing authentication files found to migrate"
+        bashio::log.info "No legacy authentication files to migrate"
     fi
 }
 
-# Install required tools
-install_tools() {
-    bashio::log.info "Installing additional tools..."
-    if ! apk add --no-cache ttyd jq curl tmux; then
-        bashio::log.error "Failed to install required tools"
-        exit 1
+# Install user-facing commands into /usr/local/bin
+setup_commands() {
+    local entry name script
+    for entry in \
+        "welcome:/opt/scripts/welcome.sh" \
+        "persist-install:/opt/scripts/persist-install.sh" \
+        "ha-context:/opt/scripts/ha-context.sh" \
+        "claude-doctor:/opt/scripts/health-check.sh"; do
+        name="${entry%%:*}"
+        script="${entry#*:}"
+        if [ -f "$script" ]; then
+            cp "$script" "/usr/local/bin/$name"
+            chmod +x "/usr/local/bin/$name"
+        else
+            bashio::log.warning "Script not found: $script"
+        fi
+    done
+
+    # Write add-on version for the welcome banner (no bashio inside ttyd)
+    bashio::addon.version > /opt/scripts/addon-version 2>/dev/null \
+        || echo "unknown" > /opt/scripts/addon-version
+}
+
+# Keep Claude Code current. The npm copy in the image is frozen at build
+# time, so install the official native build into /data (persists across
+# restarts and add-on updates) and refresh it in the background on each
+# boot. Approach adapted from #104 by @WKassebaum.
+update_claude() {
+    if [ "$(bashio::config 'claude_auto_update' 'true')" != "true" ]; then
+        bashio::log.info "Claude auto-update disabled; using bundled Claude Code"
+        return 0
     fi
-    bashio::log.info "Tools installed successfully"
+
+    # No native Claude Code builds exist for 32-bit ARM
+    case "$(uname -m)" in
+        armv7l|armv6l|armhf)
+            bashio::log.info "No native Claude Code builds for $(uname -m); using bundled copy"
+            return 0
+            ;;
+    esac
+
+    if [ -x "$HOME/.local/bin/claude" ]; then
+        bashio::log.info "Persistent Claude Code found; checking for updates in background"
+        ("$HOME/.local/bin/claude" update >/dev/null 2>&1 || true) &
+    else
+        bashio::log.info "Installing persistent Claude Code into /data (background)..."
+        (
+            if curl -fsSL --connect-timeout 10 https://claude.ai/install.sh | bash >/dev/null 2>&1 \
+                && [ -x "$HOME/.local/bin/claude" ]; then
+                bashio::log.info "Persistent Claude Code installed: $("$HOME/.local/bin/claude" --version 2>/dev/null || echo 'version unknown')"
+            else
+                bashio::log.warning "Native Claude Code install failed; using bundled copy for now"
+            fi
+        ) &
+    fi
 }
 
 # Install persistent packages from config and saved state
 install_persistent_packages() {
-    bashio::log.info "Checking for persistent packages..."
-
     local persist_config="/data/persistent-packages.json"
     local apk_packages=""
     local pip_packages=""
@@ -120,7 +171,6 @@ install_persistent_packages() {
         config_apk=$(bashio::config 'persistent_apk_packages')
         if [ -n "$config_apk" ] && [ "$config_apk" != "null" ]; then
             apk_packages="$config_apk"
-            bashio::log.info "Found APK packages in config: $apk_packages"
         fi
     fi
 
@@ -130,23 +180,17 @@ install_persistent_packages() {
         config_pip=$(bashio::config 'persistent_pip_packages')
         if [ -n "$config_pip" ] && [ "$config_pip" != "null" ]; then
             pip_packages="$config_pip"
-            bashio::log.info "Found pip packages in config: $pip_packages"
         fi
     fi
 
     # Also check local persist-install config file
     if [ -f "$persist_config" ]; then
-        bashio::log.info "Found local persistent packages config"
-
-        # Get APK packages from local config
-        local local_apk
+        local local_apk local_pip
         local_apk=$(jq -r '.apk_packages | join(" ")' "$persist_config" 2>/dev/null || echo "")
         if [ -n "$local_apk" ]; then
             apk_packages="$apk_packages $local_apk"
         fi
 
-        # Get pip packages from local config
-        local local_pip
         local_pip=$(jq -r '.pip_packages | join(" ")' "$persist_config" 2>/dev/null || echo "")
         if [ -n "$local_pip" ]; then
             pip_packages="$pip_packages $local_pip"
@@ -178,143 +222,75 @@ install_persistent_packages() {
             bashio::log.warning "Some pip packages failed to install"
         fi
     fi
-
-    if [ -z "$apk_packages" ] && [ -z "$pip_packages" ]; then
-        bashio::log.info "No persistent packages configured"
-    fi
 }
 
-# Setup session picker script
-setup_session_picker() {
-    # Copy session picker script from built-in location
-    if [ -f "/opt/scripts/claude-session-picker.sh" ]; then
-        if ! cp /opt/scripts/claude-session-picker.sh /usr/local/bin/claude-session-picker; then
-            bashio::log.error "Failed to copy claude-session-picker script"
-            exit 1
-        fi
-        chmod +x /usr/local/bin/claude-session-picker
-        bashio::log.info "Session picker script installed successfully"
-    else
-        bashio::log.warning "Session picker script not found, using auto-launch mode only"
-    fi
-
-    # Setup authentication helper if it exists
-    if [ -f "/opt/scripts/claude-auth-helper.sh" ]; then
-        chmod +x /opt/scripts/claude-auth-helper.sh
-        bashio::log.info "Authentication helper script ready"
-    fi
-
-    # Setup persist-install script if it exists
-    if [ -f "/opt/scripts/persist-install.sh" ]; then
-        if ! cp /opt/scripts/persist-install.sh /usr/local/bin/persist-install; then
-            bashio::log.warning "Failed to copy persist-install script"
-        else
-            chmod +x /usr/local/bin/persist-install
-            bashio::log.info "Persist-install script installed successfully"
-        fi
-    fi
-
-    # Setup welcome script
-    if [ -f "/opt/scripts/welcome.sh" ]; then
-        if cp /opt/scripts/welcome.sh /usr/local/bin/welcome; then
-            chmod +x /usr/local/bin/welcome
-            bashio::log.info "Welcome script installed successfully"
-        else
-            bashio::log.warning "Failed to copy welcome script"
-        fi
-    fi
-
-    # Setup ha-context script
-    if [ -f "/opt/scripts/ha-context.sh" ]; then
-        if cp /opt/scripts/ha-context.sh /usr/local/bin/ha-context; then
-            chmod +x /usr/local/bin/ha-context
-            bashio::log.info "HA context script installed successfully"
-        else
-            bashio::log.warning "Failed to copy ha-context script"
-        fi
-    fi
-
-    # Write add-on version for welcome script to read (avoids bashio dependency in ttyd)
-    bashio::addon.version > /opt/scripts/addon-version 2>/dev/null || echo "unknown" > /opt/scripts/addon-version
-}
-
-# Legacy monitoring functions removed - using simplified /data approach
-
-# Generate Home Assistant context file for Claude sessions
+# Generate Home Assistant context file for Claude sessions (background —
+# a slow Supervisor API must never delay the terminal)
 generate_ha_context() {
-    local ha_smart_context
-    ha_smart_context=$(bashio::config 'ha_smart_context' 'true')
-
-    if [ "$ha_smart_context" = "true" ]; then
-        bashio::log.info "Generating Home Assistant context for Claude sessions..."
-        if [ -f /usr/local/bin/ha-context ]; then
-            if /usr/local/bin/ha-context 2>&1 | while IFS= read -r line; do
-                bashio::log.info "$line"
-            done; then
-                bashio::log.info "HA context generated successfully"
-            else
-                bashio::log.warning "HA context generation had issues, continuing..."
-            fi
-        else
-            bashio::log.warning "ha-context script not found, skipping"
-        fi
-    else
+    if [ "$(bashio::config 'ha_smart_context' 'true')" != "true" ]; then
         bashio::log.info "HA Smart Context disabled in configuration"
+        return 0
+    fi
+
+    if [ -f /usr/local/bin/ha-context ]; then
+        bashio::log.info "Generating Home Assistant context in background"
+        (/usr/local/bin/ha-context >/dev/null 2>&1 || true) &
     fi
 }
 
-# Determine Claude launch command based on configuration
+# Build extra flags for every claude launch.
+# Note: the value is word-split; quoted multi-word arguments are not
+# re-parsed (documented limitation).
+build_claude_flags() {
+    local flags=""
+
+    if [ "$(bashio::config 'dangerously_skip_permissions' 'false')" = "true" ]; then
+        flags="--dangerously-skip-permissions"
+    fi
+
+    local extra
+    extra=$(bashio::config 'claude_extra_args' '')
+    if [ -n "$extra" ] && [ "$extra" != "null" ]; then
+        flags="${flags:+$flags }$extra"
+    fi
+
+    echo "$flags"
+}
+
+# Determine the command ttyd runs for each client connection
 get_claude_launch_command() {
-    local auto_launch_claude
+    local flags="$1"
 
-    # Get configuration value, default to true for backward compatibility
-    auto_launch_claude=$(bashio::config 'auto_launch_claude' 'true')
-
-    # Prepend welcome banner if available (runs inside ttyd, user-visible)
-    local welcome_prefix=""
-    if [ -f /usr/local/bin/welcome ]; then
-        welcome_prefix="welcome; "
-    fi
-
-    if [ "$auto_launch_claude" = "true" ]; then
-        # Use tmux for session persistence - attach to existing or create new
-        echo "${welcome_prefix}tmux new-session -A -s claude 'claude'"
+    if [ "$(bashio::config 'auto_launch_claude' 'true')" = "true" ]; then
+        # tmux -A attaches to the live session on browser reconnects and HA
+        # navigation instead of stacking new ones
+        echo "tmux new-session -A -s claude 'claude${flags:+ $flags}'"
     else
-        # Session picker manages its own tmux sessions internally,
-        # so do NOT wrap it in tmux (that would cause nested tmux errors)
-        if [ -f /usr/local/bin/claude-session-picker ]; then
-            echo "${welcome_prefix}/usr/local/bin/claude-session-picker"
-        else
-            # Fallback if session picker is missing
-            bashio::log.warning "Session picker not found, falling back to auto-launch"
-            echo "${welcome_prefix}tmux new-session -A -s claude 'claude'"
-        fi
+        # Shell mode: banner + interactive bash, still inside tmux for
+        # reconnect persistence. Run 'claude' manually when ready.
+        echo "tmux new-session -A -s claude '/usr/local/bin/welcome --shell'"
     fi
 }
-
 
 # Start main web terminal
 start_web_terminal() {
     local port=7681
-    bashio::log.info "Starting web terminal on port ${port}..."
-    
-    # Log environment information for debugging
-    bashio::log.info "Environment variables:"
-    bashio::log.info "ANTHROPIC_CONFIG_DIR=${ANTHROPIC_CONFIG_DIR}"
-    bashio::log.info "HOME=${HOME}"
+    local flags
+    flags=$(build_claude_flags)
 
-    # Get the appropriate launch command based on configuration
+    if [[ "$flags" == *"--dangerously-skip-permissions"* ]]; then
+        bashio::log.warning "=========================================================="
+        bashio::log.warning "dangerously_skip_permissions is ENABLED."
+        bashio::log.warning "Claude will run tools without asking for confirmation."
+        bashio::log.warning "It has write access to /config and can control Home"
+        bashio::log.warning "Assistant through the Supervisor API and MCP."
+        bashio::log.warning "=========================================================="
+    fi
+
     local launch_command
-    launch_command=$(get_claude_launch_command)
-    
-    # Log the configuration being used
-    local auto_launch_claude
-    auto_launch_claude=$(bashio::config 'auto_launch_claude' 'true')
-    bashio::log.info "Auto-launch Claude: ${auto_launch_claude}"
-    
-    # Set TTYD environment variable for tmux configuration
-    # This disables tmux mouse mode since ttyd has better mouse handling for web terminals
-    export TTYD=1
+    launch_command=$(get_claude_launch_command "$flags")
+
+    bashio::log.info "Starting web terminal on port ${port} (auto_launch_claude=$(bashio::config 'auto_launch_claude' 'true'))"
 
     # Terminal theme - dark palette with terracotta accents (#d97757)
     local ttyd_theme='{"background":"#1a1b26","foreground":"#c0caf5","cursor":"#d97757","cursorAccent":"#1a1b26","selectionBackground":"#33467c","selectionForeground":"#c0caf5","black":"#15161e","red":"#f7768e","green":"#9ece6a","yellow":"#e0af68","blue":"#7aa2f7","magenta":"#bb9af7","cyan":"#7dcfff","white":"#a9b1d6","brightBlack":"#414868","brightRed":"#f7768e","brightGreen":"#9ece6a","brightYellow":"#e0af68","brightBlue":"#7aa2f7","brightMagenta":"#bb9af7","brightCyan":"#7dcfff","brightWhite":"#c0caf5"}'
@@ -334,15 +310,6 @@ start_web_terminal() {
         bash -c "$launch_command"
 }
 
-# Run health check
-run_health_check() {
-    if [ -f "/opt/scripts/health-check.sh" ]; then
-        bashio::log.info "Running system health check..."
-        chmod +x /opt/scripts/health-check.sh
-        /opt/scripts/health-check.sh || bashio::log.warning "Some health checks failed but continuing..."
-    fi
-}
-
 # Setup ha-mcp (Home Assistant MCP Server) for Claude Code integration
 setup_ha_mcp() {
     if [ -f "/opt/scripts/setup-ha-mcp.sh" ]; then
@@ -351,21 +318,16 @@ setup_ha_mcp() {
         # Source the script to get the configure function
         source /opt/scripts/setup-ha-mcp.sh
         configure_ha_mcp_server || bashio::log.warning "ha-mcp setup encountered issues but continuing..."
-    else
-        bashio::log.info "ha-mcp setup script not found, skipping MCP integration"
     fi
 }
 
 # Main execution
 main() {
-    bashio::log.info "Initializing Claude Terminal add-on..."
-
-    # Run diagnostics first (especially helpful for VirtualBox issues)
-    run_health_check
+    bashio::log.info "Starting Claude Terminal add-on..."
 
     init_environment
-    install_tools
-    setup_session_picker
+    setup_commands
+    update_claude
     install_persistent_packages
     generate_ha_context
     setup_ha_mcp

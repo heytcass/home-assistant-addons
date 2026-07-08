@@ -1,7 +1,7 @@
 ---
 name: "Claude Terminal"
-description: "Terminal with Anthropic's Claude Code CLI, persistent auth, and packages"
-version: "2.2.2"
+description: "Web terminal with Anthropic's Claude Code CLI and persistent auth"
+version: "2.3.0"
 slug: "claude_terminal"
 init: false
 
@@ -12,7 +12,7 @@ arch:
   - armv7
 
 # External resources
-url: "https://github.com/anthropics/claude-code"
+url: "https://github.com/heytcass/home-assistant-addons"
 
 # Web interface configuration
 ingress: true
@@ -30,12 +30,18 @@ ports_description:
 # Add-on configuration options
 options:
   auto_launch_claude: true
+  claude_auto_update: true
+  dangerously_skip_permissions: false
+  claude_extra_args: ""
   ha_smart_context: true
   enable_ha_mcp: true
   persistent_apk_packages: []
   persistent_pip_packages: []
 schema:
   auto_launch_claude: bool?
+  claude_auto_update: bool?
+  dangerously_skip_permissions: bool?
+  claude_extra_args: str?
   ha_smart_context: bool?
   enable_ha_mcp: bool?
   persistent_apk_packages:
@@ -45,7 +51,9 @@ schema:
 
 # Volume mappings for file access
 map:
-  - config:rw    # Access to Home Assistant configuration files
+  - config:rw            # Home Assistant configuration files
+  - all_addon_configs:rw # Other add-ons' config directories (/addon_configs)
+  - share:rw             # Shared folder between add-ons and HA
 
 # API access for Home Assistant integration
 hassio_api: true
