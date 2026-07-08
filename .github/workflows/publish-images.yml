@@ -1,0 +1,46 @@
+name: Publish Images
+
+# Builds the add-on for all architectures and pushes the images to GHCR.
+# Once the packages are made public and config.yaml gains an `image:` key,
+# Home Assistant installs pull these prebuilt images instead of building
+# locally — which fixes build OOM on small boxes (#56) and stops the
+# Supervisor from exporting the locally-built image into every backup
+# (the second half of #103).
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "claude-terminal/**"
+
+jobs:
+  publish:
+    name: Publish (${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [aarch64, amd64, armv7]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push add-on image
+        uses: home-assistant/builder@2026.06.0
+        with:
+          args: |
+            --${{ matrix.arch }} \
+            --target /data/claude-terminal \
+            --image "${{ matrix.arch }}-addon-claude-terminal" \
+            --docker-hub "ghcr.io/${{ github.repository_owner }}" \
+            --addon
