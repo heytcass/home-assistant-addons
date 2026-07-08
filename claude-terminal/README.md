@@ -47,6 +47,7 @@ Works out of the box. All options:
 | `claude_extra_args` | `""` | Extra flags for every Claude launch |
 | `ha_smart_context` | `true` | Generate HA context file for Claude |
 | `enable_ha_mcp` | `true` | Home Assistant MCP server integration |
+| `ha_mcp_version` | `"7.11.0"` | ha-mcp release to run (armv7 stays on 3.5.1) |
 | `persistent_apk_packages` | `[]` | APK packages to install on startup |
 | `persistent_pip_packages` | `[]` | pip packages to install on startup |
 

@@ -1,5 +1,35 @@
 # Changelog
 
+## 2.4.0
+
+### ✨ ha-mcp 3.5.1 → 7.11.0 (four major versions)
+The bundled Home Assistant MCP server was pinned to 3.5.1 for a structural
+reason: every later release requires CPython 3.13 exactly, which no Alpine
+release ships, and Alpine's packaged uv was too old to install managed musl
+Python builds. Approach adapted from #104 by [@WKassebaum](https://github.com/WKassebaum):
+
+- uv is now installed from PyPI (pinned 0.11.28) and provisions a managed
+  musl CPython 3.13 under `/data` (downloads once, persists)
+- ha-mcp launches via `uvx --python 3.13`; the environment is pre-warmed in
+  the background so the first MCP connection doesn't hit the startup timeout
+- **Fixes the "WebSocket not connected" tool failures** (#95) — ha-mcp 7.x
+  reworked its WebSocket layer
+- **Fixes the numpy x86_v2 crash on older CPUs** (#76) — ha-mcp 7.x dropped
+  the numpy/textdistance dependency entirely
+- New `ha_mcp_version` option (default `"7.11.0"`) so future bumps are a
+  config change, not a release
+- 32-bit ARM (armv7) stays on ha-mcp 3.5.1 (no managed musl Python builds)
+
+Note: the managed Python and MCP environment add roughly 150–250 MB under
+`/data`, which is included in HA backups. This is a one-time cost, not
+unbounded growth like the old npm cache.
+
+### 🛠️ CI/CD
+- New Publish Images workflow: builds and pushes per-arch images to GHCR on
+  every release. Groundwork for prebuilt installs (no more local builds,
+  build OOM (#56), or image blobs in backups) — activated in a follow-up
+  release once the packages are public.
+
 ## 2.3.2
 
 ### 🐛 Bug Fixes

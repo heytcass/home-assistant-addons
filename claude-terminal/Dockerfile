@@ -20,10 +20,14 @@ RUN apk add --no-cache \
     tmux \
     tree \
     ttyd \
-    uv \
     vim \
     wget \
     yq
+
+# uv from PyPI, pinned: Alpine 3.21's apk uv (0.5.x) cannot install managed
+# musl CPython builds, which ha-mcp >= 4.x needs (it requires Python 3.13;
+# Alpine 3.21 ships 3.12). musllinux wheels exist for all three arches.
+RUN pip3 install --no-cache-dir --break-system-packages uv==0.11.28
 
 # Keep the npm cache out of persistent storage so it never lands in HA backups
 ENV npm_config_cache=/tmp/npm-cache
