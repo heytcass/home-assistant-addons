@@ -1,5 +1,50 @@
 # Changelog
 
+## 2.3.0
+
+Back to basics: the add-on's job is Claude Code in a terminal, done reliably.
+This release removes the wrapper layers, makes startup network-independent,
+and keeps Claude Code itself up to date.
+
+### ✨ New Features
+- **Claude Code auto-update** (`claude_auto_update`, default `true`): installs the
+  official native Claude Code build into `/data` on first boot and refreshes it in
+  the background on every startup. No more being frozen at whatever version was
+  current when the image was built (#102). Adapted from #104 by [@WKassebaum](https://github.com/WKassebaum). 32-bit ARM keeps the bundled npm copy (no native builds available).
+- **`dangerously_skip_permissions`** (default `false`): launches Claude with
+  `--dangerously-skip-permissions`. A prominent warning is logged at startup;
+  read the security note in DOCS before enabling (#51, #97, #104 — thanks
+  [@alexcf](https://github.com/alexcf), [@monxas](https://github.com/monxas), [@WKassebaum](https://github.com/WKassebaum))
+- **`claude_extra_args`**: extra flags appended to every Claude launch
+  (e.g. `--model`, `--verbose`)
+- **Broader file access**: `/addon_configs` and `/share` are now mapped, so Claude
+  can help with other add-ons' configuration (#21, #40)
+
+### 🐛 Bug Fixes
+- **Backup bloat fixed** (#103): the npm cache now lives in `/tmp` instead of
+  persistent storage, and the old multi-GB cache in `/data/home/.npm` is cleaned up
+  on first boot. Thanks [@dschaedl](https://github.com/dschaedl) for the diagnosis.
+- **Scrollback works** (#55, #82): tmux mouse mode is now enabled under ttyd, so the
+  mouse wheel scrolls history and drag-select copies to the browser clipboard via OSC 52
+- **Offline/flaky-network startup**: ttyd, tmux, and jq are baked into the image
+  instead of being apk-installed on every boot — the terminal now starts with no
+  network at all
+- **`IS_SANDBOX=1`** is set in the image, fixing silent Claude exits when permission
+  skipping is used as root (#87 — thanks [@MrJester](https://github.com/MrJester))
+- Auth indicator in the tmux status bar now recognizes current Claude Code
+  credential locations (`~/.claude/.credentials.json`)
+
+### 🔥 Removed (simplification)
+- **Session picker**: `auto_launch_claude: false` now drops to a plain shell with a
+  short command cheatsheet. Claude Code's own `-c` / `-r` flags cover
+  continue/resume, and tmux already handles reconnects
+- **"Press Enter to continue" welcome gate**: the banner no longer blocks; in
+  auto-launch mode Claude opens immediately
+- **Authentication helper menu**: modern Claude Code handles OAuth itself
+- **Boot-time health check**: no more network probes delaying startup; run
+  `claude-doctor` in the terminal for on-demand diagnostics
+- HA context generation now runs in the background instead of blocking startup
+
 ## 2.2.2
 
 ### 🐛 Bug Fixes

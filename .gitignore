@@ -34,3 +34,6 @@ dist/
 .DS_Store
 Thumbs.db
 .claude/
+
+# Local add-on test artifacts (volume mounted as /config during run-addon)
+config/

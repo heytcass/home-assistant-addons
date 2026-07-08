@@ -19,14 +19,15 @@ The fastest way to test changes without publishing new versions:
 podman build --build-arg BUILD_FROM=ghcr.io/home-assistant/amd64-base:3.21 \
   -t local/claude-terminal:test ./claude-terminal
 
-# 2. Create test configuration
-mkdir -p /tmp/test-config/claude-config
-echo '{"auto_launch_claude": false}' > /tmp/test-config/options.json
+# 2. Create test configuration (options.json lives in /data inside a real add-on)
+mkdir -p /tmp/test-config /tmp/test-data
+echo '{"auto_launch_claude": false}' > /tmp/test-data/options.json
 
 # 3. Run test container
 podman run -d --name test-claude-dev \
   -p 7681:7681 \
   -v /tmp/test-config:/config \
+  -v /tmp/test-data:/data \
   local/claude-terminal:test
 
 # 4. Check startup logs
@@ -44,7 +45,7 @@ podman stop test-claude-dev && podman rm test-claude-dev
 
 ```bash
 # Make changes to code
-vim claude-terminal/scripts/claude-session-picker.sh
+vim claude-terminal/run.sh
 
 # Rebuild image
 podman build --build-arg BUILD_FROM=ghcr.io/home-assistant/amd64-base:3.21 \
@@ -67,38 +68,35 @@ For script changes without full rebuilds:
 
 ```bash
 # Copy updated script to running container
-podman cp ./claude-terminal/scripts/claude-session-picker.sh \
-  test-claude-dev:/opt/scripts/claude-session-picker.sh
+podman cp ./claude-terminal/scripts/welcome.sh \
+  test-claude-dev:/opt/scripts/welcome.sh
 
 # Make executable
-podman exec test-claude-dev chmod +x /opt/scripts/claude-session-picker.sh
+podman exec test-claude-dev chmod +x /opt/scripts/welcome.sh
 
 # Test directly
-podman exec -it test-claude-dev /opt/scripts/claude-session-picker.sh
+podman exec -it test-claude-dev /opt/scripts/welcome.sh
 ```
 
 ### Testing Scenarios
 
-#### Session Picker Testing
+#### Launch Mode Testing
 
 ```bash
-# Test with auto-launch disabled
-echo '{"auto_launch_claude": false}' > /tmp/test-config/options.json
+# Shell mode (banner + bash instead of auto-launching Claude)
+echo '{"auto_launch_claude": false}' > /tmp/test-data/options.json
 
-# Test with auto-launch enabled (default)
-echo '{"auto_launch_claude": true}' > /tmp/test-config/options.json
+# Auto-launch mode (default)
+echo '{"auto_launch_claude": true}' > /tmp/test-data/options.json
 # OR
-rm /tmp/test-config/options.json
+rm /tmp/test-data/options.json
 ```
 
 #### Authentication Testing
 
 ```bash
-# Start with clean credentials
-rm -rf /tmp/test-config/claude-config/*
-
-# Pre-populate credentials for testing
-cp ~/.config/anthropic/* /tmp/test-config/claude-config/
+# Start with clean credentials (credentials persist in /data)
+rm -rf /tmp/test-data/.config/claude /tmp/test-data/home/.claude
 ```
 
 #### Multi-session Testing
@@ -130,15 +128,15 @@ podman exec test-claude-dev env | grep CLAUDE
 #### Script Debugging
 
 ```bash
-# Test session picker with debug output
-podman exec -it test-claude-dev bash -x /opt/scripts/claude-session-picker.sh
+# Test scripts with debug output
+podman exec -it test-claude-dev bash -x /opt/scripts/welcome.sh
 
-# Test startup script components
-podman exec test-claude-dev /usr/local/bin/claude-session-picker
+# Run on-demand diagnostics
+podman exec test-claude-dev /usr/local/bin/claude-doctor
 
 # Check file permissions and locations
 podman exec test-claude-dev ls -la /opt/scripts/
-podman exec test-claude-dev ls -la /config/claude-config/
+podman exec test-claude-dev ls -la /data/
 ```
 
 #### Network Testing
@@ -194,9 +192,9 @@ podman run -d --name test-claude-dev -p 7682:7681 -v /tmp/test-config:/config lo
 
 #### Volume Mount Issues
 ```bash
-# Ensure directory exists and has correct permissions
-mkdir -p /tmp/test-config/claude-config
-chmod 755 /tmp/test-config/claude-config
+# Ensure directories exist and have correct permissions
+mkdir -p /tmp/test-config /tmp/test-data
+chmod 755 /tmp/test-config /tmp/test-data
 
 # Check SELinux labels (if applicable)
 ls -laZ /tmp/test-config/
@@ -262,11 +260,11 @@ The changes will automatically be built and distributed to Home Assistant users.
 
 ```bash
 # Test with real Home Assistant config structure
-mkdir -p /tmp/ha-config/{.storage,claude-config}
-echo '{"auto_launch_claude": false}' > /tmp/ha-config/options.json
+mkdir -p /tmp/ha-config/.storage /tmp/ha-data
+echo '{"auto_launch_claude": false}' > /tmp/ha-data/options.json
 
 podman run -d --name test-ha-claude -p 7681:7681 \
-  -v /tmp/ha-config:/config local/claude-terminal:test
+  -v /tmp/ha-config:/config -v /tmp/ha-data:/data local/claude-terminal:test
 ```
 
 ### Cross-Platform Testing

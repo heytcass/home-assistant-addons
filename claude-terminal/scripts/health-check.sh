@@ -7,8 +7,9 @@ check_system_resources() {
     bashio::log.info "=== System Resources Check ==="
 
     # Check available memory
-    local mem_total=$(awk '/MemTotal/ {print int($2/1024)}' /proc/meminfo)
-    local mem_free=$(awk '/MemAvailable/ {print int($2/1024)}' /proc/meminfo)
+    local mem_total mem_free
+    mem_total=$(awk '/MemTotal/ {print int($2/1024)}' /proc/meminfo)
+    mem_free=$(awk '/MemAvailable/ {print int($2/1024)}' /proc/meminfo)
     bashio::log.info "Memory: ${mem_free}MB free of ${mem_total}MB total"
 
     if [ "$mem_free" -lt 256 ]; then
@@ -17,7 +18,8 @@ check_system_resources() {
     fi
 
     # Check disk space in /data
-    local disk_free=$(df -m /data | tail -1 | awk '{print $4}')
+    local disk_free
+    disk_free=$(df -m /data | tail -1 | awk '{print $4}')
     bashio::log.info "Disk space in /data: ${disk_free}MB free"
 
     if [ "$disk_free" -lt 100 ]; then
@@ -51,7 +53,8 @@ check_node_installation() {
     bashio::log.info "=== Node.js Installation Check ==="
 
     if command -v node >/dev/null 2>&1; then
-        local node_version=$(node --version)
+        local node_version
+        node_version=$(node --version)
         bashio::log.info "Node.js installed: $node_version ✓"
     else
         bashio::log.error "Node.js not found ✗"
@@ -59,7 +62,8 @@ check_node_installation() {
     fi
 
     if command -v npm >/dev/null 2>&1; then
-        local npm_version=$(npm --version)
+        local npm_version
+        npm_version=$(npm --version)
         bashio::log.info "npm installed: $npm_version ✓"
     else
         bashio::log.error "npm not found ✗"

@@ -1,10 +1,10 @@
 # Claude Terminal
 
-A terminal interface for Anthropic's Claude Code CLI in Home Assistant.
+Claude Code in a web terminal, as a Home Assistant add-on.
 
 ## About
 
-This add-on provides a web-based terminal with Claude Code CLI pre-installed, allowing you to access Claude's powerful AI capabilities directly from your Home Assistant dashboard. The terminal provides full access to Claude's code generation, explanation, and problem-solving capabilities.
+This add-on runs Anthropic's [Claude Code](https://docs.anthropic.com/en/docs/claude-code) CLI in a browser-based terminal (ttyd + tmux) with your Home Assistant configuration mounted. Open it from the sidebar, log in once, and ask Claude to write automations, debug YAML, or manage your setup.
 
 ## Installation
 
@@ -14,93 +14,67 @@ This add-on provides a web-based terminal with Claude Code CLI pre-installed, al
 4. Click "OPEN WEB UI" to access the terminal
 5. On first use, follow the OAuth prompts to log in to your Anthropic account
 
-## Configuration
+Your credentials are stored under `/data` and persist across restarts and add-on updates, so you won't need to log in again.
 
-No configuration is needed! The add-on uses OAuth authentication, so you'll be prompted to log in to your Anthropic account the first time you use it.
-
-Your OAuth credentials are stored in the `/config/claude-config` directory and will persist across add-on updates and restarts, so you won't need to log in again.
-
-### Options
+## Options
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `auto_launch_claude` | `true` | Automatically start Claude when opening the terminal |
-| `enable_ha_mcp` | `true` | Enable Home Assistant MCP server integration |
-| `persistent_apk_packages` | `[]` | APK packages to install on every startup |
-| `persistent_pip_packages` | `[]` | Python packages to install on every startup |
+| `auto_launch_claude` | `true` | Start Claude immediately when the terminal opens. Set to `false` to get a shell instead (run `claude` yourself). |
+| `claude_auto_update` | `true` | Keep Claude Code current: installs the official native build into `/data` and updates it in the background on each startup. |
+| `dangerously_skip_permissions` | `false` | Launch Claude with `--dangerously-skip-permissions` (no confirmation prompts). **Read the security note below.** |
+| `claude_extra_args` | `""` | Extra flags appended to every Claude launch, e.g. `--model claude-sonnet-5`. Values are split on spaces; quoted multi-word arguments are not supported. |
+| `ha_smart_context` | `true` | Generate a CLAUDE.md with your HA system info so Claude knows your setup. |
+| `enable_ha_mcp` | `true` | Register the [ha-mcp](https://github.com/homeassistant-ai/ha-mcp) MCP server so Claude can control Home Assistant directly. |
+| `persistent_apk_packages` | `[]` | APK packages reinstalled on every startup. |
+| `persistent_pip_packages` | `[]` | Python packages reinstalled on every startup. |
 
 ## Usage
 
-Claude launches automatically when you open the terminal. You can also start Claude manually with:
+With default settings, Claude launches automatically inside a tmux session named `claude`. Navigating away in Home Assistant and coming back reattaches to the same session — your conversation survives.
+
+Useful commands (in shell mode, or after exiting Claude):
 
 ```bash
-claude
+claude          # start Claude Code
+claude -c       # continue the most recent conversation
+claude -r       # pick a past conversation to resume
+claude-doctor   # diagnose network, auth, and environment issues
+persist-install apk htop   # install packages that survive restarts
+ha-context      # refresh the Home Assistant context file
 ```
 
-### Common Commands
+### Terminal tips
 
-- `claude -i` - Start an interactive Claude session
-- `claude --help` - See all available commands
-- `claude "your prompt"` - Ask Claude a single question
-- `claude process myfile.py` - Have Claude analyze a file
-- `claude --editor` - Start an interactive editor session
+- **Scrolling**: use the mouse wheel — tmux copy-mode opens automatically. Press `q` to jump back to the bottom.
+- **Copying**: select text with the mouse; it's copied to your clipboard automatically (OSC 52).
+- **Pasting**: use `Ctrl+Shift+V` (or right-click, depending on browser).
 
-The terminal starts directly in your `/config` directory, giving you immediate access to all your Home Assistant configuration files. This makes it easy to get help with your configuration, create automations, and troubleshoot issues.
+### File access
 
-## Features
+The terminal starts in `/config` (your Home Assistant configuration). Also mounted:
 
-- **Web Terminal**: Access a full terminal environment via your browser
-- **Auto-Launching**: Claude starts automatically when you open the terminal
-- **Claude AI**: Access Claude's AI capabilities for programming, troubleshooting and more
-- **Direct Config Access**: Terminal starts in `/config` for immediate access to all Home Assistant files
-- **Simple Setup**: Uses OAuth for easy authentication
-- **Home Assistant Integration**: Access directly from your dashboard
-- **Home Assistant MCP Server**: Built-in integration with [ha-mcp](https://github.com/homeassistant-ai/ha-mcp) for natural language control
+- `/addon_configs` — configuration directories of your other add-ons
+- `/share` — the shared folder
 
 ## Home Assistant MCP Integration
 
-This add-on includes the [homeassistant-ai/ha-mcp](https://github.com/homeassistant-ai/ha-mcp) MCP server, enabling Claude to directly interact with your Home Assistant instance using natural language.
+The bundled [ha-mcp](https://github.com/homeassistant-ai/ha-mcp) server connects Claude to Home Assistant through the Supervisor API — no token setup needed. Claude can query states, control devices, and manage automations, scripts, and dashboards in natural language.
 
-### What You Can Do
+Disable it with `enable_ha_mcp: false` if you don't want Claude to have this access.
 
-- **Control Devices**: "Turn off the living room lights", "Set the thermostat to 72°F"
-- **Query States**: "What's the temperature in the bedroom?", "Is the front door locked?"
-- **Manage Automations**: "Create an automation that turns on the porch light at sunset"
-- **Work with Scripts**: "Run my movie mode script", "Create a script for my morning routine"
-- **View History**: "Show me the energy usage for the last week"
-- **Debug Issues**: "Why isn't my motion sensor automation triggering?"
-- **Manage Dashboards**: "Add a weather card to my dashboard"
+## Security notes
 
-### How It Works
+**This add-on gives Claude a lot of power by design**: it runs as root in its container, has read/write access to `/config`, `/addon_configs`, and `/share`, and (with MCP enabled) can control devices and modify automations.
 
-The MCP (Model Context Protocol) server automatically connects to your Home Assistant using the Supervisor API. No manual configuration or token setup is required - it just works!
-
-The integration provides 97+ tools for:
-- Entity search and control
-- Automation and script management
-- Dashboard configuration
-- History and statistics
-- Device registry access
-- And much more
-
-### Security Note
-
-The ha-mcp integration gives Claude extensive control over your Home Assistant instance, including the ability to control devices, modify automations, and access history data. Only enable this if you understand and accept these capabilities. You can disable it at any time by setting `enable_ha_mcp: false` in the add-on configuration.
-
-### Disabling the Integration
-
-If you don't want the Home Assistant MCP integration, you can disable it in the add-on configuration:
-
-```yaml
-enable_ha_mcp: false
-```
+**`dangerously_skip_permissions` removes the last human checkpoint.** With it enabled, a misunderstanding — or a prompt injection in any file or web page Claude reads — can modify your HA configuration or actuate devices without asking you first. Leave it off unless you understand and accept that trade-off. A warning banner is printed in the add-on log whenever it is active.
 
 ## Troubleshooting
 
-- If Claude doesn't start automatically, try running `claude -i` manually
-- If you see permission errors, try restarting the add-on
-- If you have authentication issues, try logging out and back in
-- Check the add-on logs for any error messages
+- **Claude exits immediately or behaves oddly**: restart the add-on so the background auto-updater can fetch the latest Claude Code; check the add-on log for update messages.
+- **Diagnostics**: run `claude-doctor` in the terminal for connectivity, memory, and environment checks.
+- **Authentication problems**: run `claude /logout` inside Claude, then log in again.
+- **Old backups too large?** Versions before 2.3.0 accumulated an npm cache in the add-on's data directory (up to several GB). 2.3.0 removes it automatically on first boot — take a fresh backup after upgrading.
 
 ## Credits
 

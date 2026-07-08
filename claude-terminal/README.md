@@ -1,6 +1,6 @@
 # Claude Terminal for Home Assistant
 
-A secure, web-based terminal with Claude Code CLI pre-installed for Home Assistant.
+Claude Code in a web terminal, as a Home Assistant add-on.
 
 ![Claude Terminal Screenshot](https://github.com/heytcass/home-assistant-addons/raw/main/claude-terminal/screenshot.png)
 
@@ -8,186 +8,53 @@ A secure, web-based terminal with Claude Code CLI pre-installed for Home Assista
 
 ## What is Claude Terminal?
 
-This add-on provides a web-based terminal interface with Claude Code CLI pre-installed, allowing you to use Claude's powerful AI capabilities directly from your Home Assistant dashboard. It gives you direct access to Anthropic's Claude AI assistant through a terminal, ideal for:
+This add-on runs Anthropic's [Claude Code](https://docs.anthropic.com/en/docs/claude-code) CLI in a browser-based terminal, directly from your Home Assistant dashboard. It starts in your `/config` directory, so Claude can immediately help with:
 
-- Writing and editing code
-- Debugging problems
-- Learning new programming concepts
-- Creating Home Assistant scripts and automations
+- Writing and debugging automations, scripts, and dashboards
+- Fixing YAML configuration problems
+- Controlling and inspecting Home Assistant via the bundled MCP server
+- General coding and troubleshooting
 
 ## Features
 
-- **Web Terminal Interface**: Access Claude through a browser-based terminal using ttyd
-- **Auto-Launch**: Claude starts automatically when you open the terminal
-- **Claude Code CLI**: Pre-installed via npm for reliable cross-platform compatibility
-- **No Configuration Needed**: Uses OAuth authentication for easy setup
-- **Direct Config Access**: Terminal starts in your `/config` directory for immediate access to all Home Assistant files
-- **Home Assistant Integration**: Access directly from your dashboard
-- **Panel Icon**: Quick access from the sidebar with the code-braces icon
-- **Multi-Architecture Support**: Works on amd64, aarch64, and armv7 platforms
-- **Secure Credential Management**: Persistent authentication with safe credential storage
-- **Automatic Recovery**: Built-in fallbacks and error handling for reliable operation
-- **Persistent Package Management**: Install APK and pip packages that survive container restarts
-
-## Quick Start
-
-The terminal automatically starts Claude when you open it. You can immediately start using commands like:
-
-```bash
-# Ask Claude a question directly
-claude "How can I write a Python script to control my lights?"
-
-# Start an interactive session
-claude -i
-
-# Get help with available commands
-claude --help
-
-# Debug authentication if needed
-claude-auth debug
-
-# Log out and re-authenticate
-claude-logout
-
-# Install packages that persist across restarts
-persist-install apk vim htop
-persist-install pip requests pandas
-
-# List persistent packages
-persist-install list
-```
+- **Just Claude Code**: opens straight into Claude — no menus in the way
+- **Stays current**: the official native Claude Code build is installed into persistent storage and auto-updated in the background
+- **Session persistence**: tmux keeps your conversation alive across browser reloads and HA navigation; scrollback and mouse copy work
+- **Persistent auth**: log in once via OAuth; credentials survive restarts and updates
+- **Home Assistant MCP**: bundled [ha-mcp](https://github.com/homeassistant-ai/ha-mcp) server for natural-language control of your instance
+- **HA Smart Context**: Claude automatically knows your HA version, entities, and add-ons
+- **Broad file access**: `/config`, `/addon_configs`, and `/share` are mounted
+- **Persistent packages**: `persist-install` keeps your extra apk/pip tools across restarts
+- **Multi-architecture**: amd64, aarch64, and armv7
 
 ## Installation
 
 1. Add this repository to your Home Assistant add-on store
 2. Install the Claude Terminal add-on
 3. Start the add-on
-4. Click "OPEN WEB UI" or the sidebar icon to access
+4. Click "OPEN WEB UI" or the sidebar icon
 5. On first use, follow the OAuth prompts to log in to your Anthropic account
 
 ## Configuration
 
-The add-on works out of the box with sensible defaults. Optional configuration:
+Works out of the box. All options:
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `auto_launch_claude` | `true` | Auto-start Claude on terminal open (set to `false` for session picker) |
-| `persistent_apk_packages` | `[]` | List of APK packages to install on startup |
-| `persistent_pip_packages` | `[]` | List of pip packages to install on startup |
+| `auto_launch_claude` | `true` | Start Claude on terminal open; `false` gives you a shell |
+| `claude_auto_update` | `true` | Keep Claude Code updated automatically |
+| `dangerously_skip_permissions` | `false` | Skip Claude's confirmation prompts (see security note in [DOCS](DOCS.md)) |
+| `claude_extra_args` | `""` | Extra flags for every Claude launch |
+| `ha_smart_context` | `true` | Generate HA context file for Claude |
+| `enable_ha_mcp` | `true` | Home Assistant MCP server integration |
+| `persistent_apk_packages` | `[]` | APK packages to install on startup |
+| `persistent_pip_packages` | `[]` | pip packages to install on startup |
 
-### Example Configuration
-```yaml
-auto_launch_claude: true
-persistent_apk_packages:
-  - vim
-  - htop
-  - rsync
-persistent_pip_packages:
-  - requests
-  - pandas
-  - numpy
-```
-
-### Default Settings
-- **Port**: Web interface runs on port 7681
-- **Authentication**: OAuth with Anthropic (credentials stored securely in `/data/.config/claude/`)
-- **Terminal**: Full bash environment with Claude Code CLI pre-installed
-- **Volumes**: Access to `/config` (Home Assistant configuration)
-
-## Troubleshooting
-
-### Authentication Issues
-If you have authentication problems:
-```bash
-claude-auth debug    # Show credential status
-claude-logout        # Clear credentials and re-authenticate
-```
-
-### Container Issues
-- Credentials are automatically saved and restored between restarts
-- Check add-on logs if the terminal doesn't load
-- Restart the add-on if Claude commands aren't recognized
-
-### Development
-For local development and testing:
-```bash
-# Enter development environment
-nix develop
-
-# Build and test locally
-build-addon
-run-addon
-
-# Lint and validate
-lint-dockerfile
-test-endpoint
-```
-
-## Architecture
-
-- **Base Image**: Home Assistant Alpine Linux base (3.21)
-- **Container Runtime**: Compatible with Docker/Podman
-- **Web Terminal**: ttyd for browser-based access
-- **Process Management**: s6-overlay for reliable service startup
-- **Networking**: Ingress support with Home Assistant reverse proxy
-
-## Security
-
-Version 1.0.2 includes important security improvements:
-- ✅ **Secure Credential Management**: Limited filesystem access to safe directories only
-- ✅ **Safe Cleanup Operations**: No more dangerous system-wide file deletions
-- ✅ **Proper Permission Handling**: Consistent file permissions (600) for credentials
-- ✅ **Input Validation**: Enhanced error checking and bounds validation
-
-## Development Environment
-
-This add-on includes a comprehensive development setup using Nix:
-
-```bash
-# Available development commands
-build-addon      # Build the add-on container with Podman
-run-addon        # Run add-on locally on port 7681
-lint-dockerfile  # Lint Dockerfile with hadolint
-test-endpoint    # Test web endpoint availability
-```
-
-**Requirements for development:**
-- NixOS or Nix package manager
-- Podman (automatically provided in dev shell)
-- Optional: direnv for automatic environment activation
-
-## Documentation
-
-For detailed usage instructions, see the [documentation](DOCS.md).
-
-## Version History
-
-### v1.9.0 (Current) - npm Installation Fix
-- **Reverted to npm installation**: Fixes musl binary compatibility issues on Alpine Linux
-- Native installer binary required musl 1.2.6+ which Alpine 3.21 doesn't ship
-
-### v1.5.0 - Persistent Packages
-- **Persistent Package Management**: Install APK and pip packages that survive restarts
-- New `persist-install` command for easy package management
-- Configuration options for auto-installing packages on startup
-- Inspired by community contributions from [@ESJavadex](https://github.com/ESJavadex)
-
-### v1.4.x
-- Added Python 3.11 and development tools (git, vim, jq, wget, tree)
-- ttyd keepalive options to prevent WebSocket disconnects
-- Home Assistant API access with examples
-
-### v1.3.x
-- Interactive session picker menu
-- Authentication helper for clipboard issues
-- Health check diagnostics
-
-See [CHANGELOG.md](CHANGELOG.md) for complete version history.
+See [DOCS.md](DOCS.md) for full documentation, terminal tips (scrolling, copy/paste), and troubleshooting.
 
 ## Useful Links
 
-- [Claude Code Documentation](https://docs.anthropic.com/claude/docs/claude-code)
-- [Get an Anthropic API Key](https://console.anthropic.com/)
+- [Claude Code Documentation](https://docs.anthropic.com/en/docs/claude-code)
 - [Claude Code GitHub Repository](https://github.com/anthropics/claude-code)
 - [Home Assistant Add-ons](https://www.home-assistant.io/addons/)
 

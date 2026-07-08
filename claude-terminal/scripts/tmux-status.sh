@@ -7,10 +7,13 @@
 auth_status() {
     local config_dir="${ANTHROPIC_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/claude}"
 
-    if [ -f "$config_dir/settings.json" ] && \
-       grep -q '"apiKey"\|"oauthToken"\|"sessionKey"' "$config_dir/settings.json" 2>/dev/null; then
+    # Current Claude Code stores OAuth credentials in ~/.claude; older
+    # versions used the config dir
+    if [ -f "$HOME/.claude/.credentials.json" ] || \
+       [ -f "$config_dir/.credentials.json" ] || [ -f "$config_dir/credentials.json" ]; then
         echo "#[fg=colour114]Auth"
-    elif [ -f "$config_dir/.credentials.json" ] || [ -f "$config_dir/credentials.json" ]; then
+    elif [ -f "$config_dir/settings.json" ] && \
+       grep -q '"apiKey"\|"oauthToken"\|"sessionKey"' "$config_dir/settings.json" 2>/dev/null; then
         echo "#[fg=colour114]Auth"
     else
         echo "#[fg=colour203]Auth"
