@@ -23,6 +23,15 @@ now re-validated and rolled back the same way.
 Contributed by [@JoshDev](https://github.com/JoshDev) (#117); thanks
 [@Dezent](https://github.com/Dezent) for the diagnosis in #112.
 
+### 🔧 Bundled Claude now installed as a native binary at build time
+The `@anthropic-ai/claude-code` npm package has become a thin wrapper that
+just installs the platform's native binary, and running npm/Node during
+QEMU-emulated aarch64 image builds started crashing CI. The Dockerfile now
+downloads the native musl binary directly from the npm registry (curl+tar,
+no Node involved) and places it at `/usr/local/bin/claude`. Same
+"latest at build time" behavior, smaller image, and aarch64 images build
+reliably again.
+
 ## 2.5.0
 
 ### 📦 Prebuilt images

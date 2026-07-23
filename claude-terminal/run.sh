@@ -42,7 +42,7 @@ init_environment() {
     export ANTHROPIC_HOME="/data"
 
     # The persistent native Claude install (see update_claude) must win over
-    # the npm copy bundled in the image
+    # the copy bundled in the image
     export PATH="$data_home/.local/bin:$PATH"
 
     # Older versions let the npm cache pile up here, inflating HA backups by
@@ -126,7 +126,7 @@ setup_commands() {
         || echo "unknown" > /opt/scripts/addon-version
 }
 
-# Keep Claude Code current. The npm copy in the image is frozen at build
+# Keep Claude Code current. The bundled copy in the image is frozen at build
 # time, so install the official native build into /data (persists across
 # restarts and add-on updates) and refresh it in the background on each
 # boot. Approach adapted from #104 by @WKassebaum.
