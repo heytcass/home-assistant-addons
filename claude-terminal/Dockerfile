@@ -36,11 +36,27 @@ ENV npm_config_cache=/tmp/npm-cache
 # environment declares itself a disposable container — which HA add-ons are
 ENV IS_SANDBOX=1
 
+# The HA base image already runs ash with pipefail; restate it so hadolint
+# (which only sees this file) knows the curl|tar pipe below is guarded
+SHELL ["/bin/ash", "-o", "pipefail", "-c"]
+
 # Bundled Claude Code CLI. This copy is frozen at image build time; when
 # claude_auto_update is enabled, run.sh maintains a persistent native install
 # in /data that takes precedence and keeps itself current.
-RUN npm install -g @anthropic-ai/claude-code@latest \
-    && npm cache clean --force
+# Fetched as the native musl binary straight from the npm registry rather
+# than via `npm install -g`: the npm package is now only a wrapper that
+# installs this same binary, and running npm/Node during aarch64 cross-builds
+# (QEMU on CI runners) crashes V8 with SIGILL. curl+tar emulate fine.
+RUN case "$(apk --print-arch)" in \
+        x86_64)  claude_pkg="linux-x64-musl" ;; \
+        aarch64) claude_pkg="linux-arm64-musl" ;; \
+        *) echo "Unsupported architecture: $(apk --print-arch)" >&2; exit 1 ;; \
+    esac \
+    && claude_version="$(curl -fsSL https://registry.npmjs.org/@anthropic-ai/claude-code/latest | jq -r .version)" \
+    && curl -fsSL "https://registry.npmjs.org/@anthropic-ai/claude-code-${claude_pkg}/-/claude-code-${claude_pkg}-${claude_version}.tgz" \
+        | tar -xz -C /tmp package/claude \
+    && install -m 0755 /tmp/package/claude /usr/local/bin/claude \
+    && rm -rf /tmp/package
 
 WORKDIR /config
 

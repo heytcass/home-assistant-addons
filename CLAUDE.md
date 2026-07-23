@@ -60,7 +60,7 @@ curl -X GET http://localhost:7681/
 ### Key Design Rules
 - **Nothing on the boot path may hit the network or block on input.** Network work (updates, context generation) is backgrounded; packages ship in the image.
 - **Everything persistent lives in `/data`** (HOME is `/data/home`). The container filesystem is recreated on every restart.
-- **Two Claude copies exist**: the npm copy baked into the image (fallback, frozen at build time) and the native install in `/data/home/.local/bin` (persists, self-updates, wins via PATH).
+- **Two Claude copies exist**: the native musl binary baked into the image at `/usr/local/bin/claude` (fallback, frozen at build time, fetched straight from the npm registry — no npm/Node during build, which crashes under QEMU in aarch64 CI builds) and the native install in `/data/home/.local/bin` (persists, self-updates, wins via PATH).
 - **No custom session UI.** tmux `new-session -A` handles reconnects; Claude Code's own `-c`/`-r` handle continue/resume.
 
 ## Development Notes

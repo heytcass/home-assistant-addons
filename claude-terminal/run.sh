@@ -42,7 +42,7 @@ init_environment() {
     export ANTHROPIC_HOME="/data"
 
     # The persistent native Claude install (see update_claude) must win over
-    # the npm copy bundled in the image
+    # the copy bundled in the image
     export PATH="$data_home/.local/bin:$PATH"
 
     # Older versions let the npm cache pile up here, inflating HA backups by
@@ -126,21 +126,22 @@ setup_commands() {
         || echo "unknown" > /opt/scripts/addon-version
 }
 
-# Keep Claude Code current. The npm copy in the image is frozen at build
+# Keep Claude Code current. The bundled copy in the image is frozen at build
 # time, so install the official native build into /data (persists across
 # restarts and add-on updates) and refresh it in the background on each
 # boot. Approach adapted from #104 by @WKassebaum.
 # A native install being executable (-x) is not the same as it being
 # runnable. The native build is dynamically linked, so a libc symbol
-# mismatch — e.g. the Alpine base image's musl lacking `posix_getdents`,
+# mismatch — e.g. an older base image's musl lacking `posix_getdents`,
 # which recent Claude Code builds relocate against — makes the binary abort
 # on launch with a relocation error even though the file is present and +x.
 # Such a binary still wins on PATH over the bundled copy and takes the whole
 # terminal down with it (ttyd runs `tmux new-session ... 'claude'`, so the
 # tmux session dies the instant claude does). Treat "installed" and
-# "actually runs" as separate facts.
+# "actually runs" as separate facts. The timeout keeps a wedged binary from
+# blocking the boot path (this check runs before ttyd starts).
 native_claude_runs() {
-    "$HOME/.local/bin/claude" --version >/dev/null 2>&1
+    timeout 10 "$HOME/.local/bin/claude" --version >/dev/null 2>&1
 }
 
 # Remove a persistent native install that exists but cannot execute in this
