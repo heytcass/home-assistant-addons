@@ -130,26 +130,78 @@ setup_commands() {
 # time, so install the official native build into /data (persists across
 # restarts and add-on updates) and refresh it in the background on each
 # boot. Approach adapted from #104 by @WKassebaum.
+# A native install being executable (-x) is not the same as it being
+# runnable. The native build is dynamically linked, so a libc symbol
+# mismatch — e.g. the Alpine base image's musl lacking `posix_getdents`,
+# which recent Claude Code builds relocate against — makes the binary abort
+# on launch with a relocation error even though the file is present and +x.
+# Such a binary still wins on PATH over the bundled copy and takes the whole
+# terminal down with it (ttyd runs `tmux new-session ... 'claude'`, so the
+# tmux session dies the instant claude does). Treat "installed" and
+# "actually runs" as separate facts.
+native_claude_runs() {
+    "$HOME/.local/bin/claude" --version >/dev/null 2>&1
+}
+
+# Remove a persistent native install that exists but cannot execute in this
+# image (typically a libc mismatch), so it stops shadowing the working
+# bundled copy at /usr/local/bin/claude on PATH. This must run regardless of
+# the auto-update setting — a broken +x binary is what takes the terminal
+# down, and disabling auto-update does not remove it. Returns 0 if a usable
+# native install remains, 1 otherwise.
+ensure_native_claude_usable() {
+    [ -x "$HOME/.local/bin/claude" ] || return 1
+    if native_claude_runs; then
+        return 0
+    fi
+    bashio::log.warning "Persistent Claude Code is present but fails to run (likely a libc mismatch); removing it and falling back to the bundled copy"
+    rm -f "$HOME/.local/bin/claude"
+    return 1
+}
+
 update_claude() {
+    # Always neutralise a broken persistent install first, even when
+    # auto-update is off, so it can't keep shadowing the bundled copy.
+    # Capture via `|| native_usable=$?` so the intentional non-zero return
+    # (no/removed native install) doesn't trip `set -e` and abort startup.
+    local native_usable=0
+    ensure_native_claude_usable || native_usable=$?
+
     if [ "$(bashio::config 'claude_auto_update' 'true')" != "true" ]; then
-        bashio::log.info "Claude auto-update disabled; using bundled Claude Code"
+        if [ "$native_usable" -eq 0 ]; then
+            bashio::log.info "Claude auto-update disabled; using persistent Claude Code"
+        else
+            bashio::log.info "Claude auto-update disabled; using bundled Claude Code"
+        fi
         return 0
     fi
 
-    if [ -x "$HOME/.local/bin/claude" ]; then
+    if [ "$native_usable" -eq 0 ]; then
         bashio::log.info "Persistent Claude Code found; checking for updates in background"
-        ("$HOME/.local/bin/claude" update >/dev/null 2>&1 || true) &
-    else
-        bashio::log.info "Installing persistent Claude Code into /data (background)..."
         (
-            if curl -fsSL --connect-timeout 10 https://claude.ai/install.sh | bash >/dev/null 2>&1 \
-                && [ -x "$HOME/.local/bin/claude" ]; then
-                bashio::log.info "Persistent Claude Code installed: $("$HOME/.local/bin/claude" --version 2>/dev/null || echo 'version unknown')"
-            else
-                bashio::log.warning "Native Claude Code install failed; using bundled copy for now"
+            "$HOME/.local/bin/claude" update >/dev/null 2>&1 || true
+            # An update can pull a build this image's libc can't run; don't
+            # let it linger on PATH for the next launch or reconnect.
+            if [ -x "$HOME/.local/bin/claude" ] && ! native_claude_runs; then
+                bashio::log.warning "Updated Claude Code no longer runs in this image; removing it and falling back to the bundled copy"
+                rm -f "$HOME/.local/bin/claude"
             fi
         ) &
+        return 0
     fi
+
+    bashio::log.info "Installing persistent Claude Code into /data (background)..."
+    (
+        if curl -fsSL --connect-timeout 10 https://claude.ai/install.sh | bash >/dev/null 2>&1 \
+            && [ -x "$HOME/.local/bin/claude" ] && native_claude_runs; then
+            bashio::log.info "Persistent Claude Code installed: $("$HOME/.local/bin/claude" --version 2>/dev/null || echo 'version unknown')"
+        else
+            # Don't let a freshly installed but unrunnable binary shadow the
+            # bundled copy either.
+            rm -f "$HOME/.local/bin/claude"
+            bashio::log.warning "Native Claude Code install unavailable or unrunnable; using bundled copy"
+        fi
+    ) &
 }
 
 # Install persistent packages from config and saved state
