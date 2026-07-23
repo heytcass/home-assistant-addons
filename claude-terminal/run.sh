@@ -132,15 +132,16 @@ setup_commands() {
 # boot. Approach adapted from #104 by @WKassebaum.
 # A native install being executable (-x) is not the same as it being
 # runnable. The native build is dynamically linked, so a libc symbol
-# mismatch — e.g. the Alpine base image's musl lacking `posix_getdents`,
+# mismatch — e.g. an older base image's musl lacking `posix_getdents`,
 # which recent Claude Code builds relocate against — makes the binary abort
 # on launch with a relocation error even though the file is present and +x.
 # Such a binary still wins on PATH over the bundled copy and takes the whole
 # terminal down with it (ttyd runs `tmux new-session ... 'claude'`, so the
 # tmux session dies the instant claude does). Treat "installed" and
-# "actually runs" as separate facts.
+# "actually runs" as separate facts. The timeout keeps a wedged binary from
+# blocking the boot path (this check runs before ttyd starts).
 native_claude_runs() {
-    "$HOME/.local/bin/claude" --version >/dev/null 2>&1
+    timeout 10 "$HOME/.local/bin/claude" --version >/dev/null 2>&1
 }
 
 # Remove a persistent native install that exists but cannot execute in this

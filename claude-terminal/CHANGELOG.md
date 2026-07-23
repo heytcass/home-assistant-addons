@@ -3,8 +3,9 @@
 ## 2.5.1
 
 ### 🐛 Blank terminal when the persistent Claude build can't run
-On the Alpine 3.21 base image (musl 1.2.5), recent native Claude Code builds
-abort on launch with `Error relocating ...: posix_getdents: symbol not found`.
+On containers built from older Alpine bases (musl < 1.2.5, which lacks
+`posix_getdents`), recent native Claude Code builds abort on launch with
+`Error relocating ...: posix_getdents: symbol not found` (#112).
 Because the persistent install in `/data` is still executable, it kept
 shadowing the working bundled copy on `PATH` — and since ttyd launches
 `tmux new-session ... 'claude'`, the tmux session died the instant `claude`
@@ -18,6 +19,9 @@ bundled copy takes over and the terminal stays usable. This runs even when
 `claude_auto_update` is disabled (disabling updates never removed the broken
 binary), and a background `claude update` that pulls an unrunnable build is
 now re-validated and rolled back the same way.
+
+Contributed by [@JoshDev](https://github.com/JoshDev) (#117); thanks
+[@Dezent](https://github.com/Dezent) for the diagnosis in #112.
 
 ## 2.5.0
 
