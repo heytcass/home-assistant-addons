@@ -8,14 +8,29 @@
 # Why: the browser terminal's OSC 52 clipboard path truncates long payloads
 # (~400 chars), and Claude Code's login URL is ~450+ chars — the tail (the
 # `state` parameter) gets cut off, which makes authorization fail with
-# "Invalid request format". capture-pane with -J joins soft-wrapped lines,
-# so the URL comes out intact regardless of terminal width.
+# "Invalid request format".
+#
+# Claude Code's own UI hard-wraps the URL across multiple physical lines
+# (real line breaks from its own rendering, not the terminal's soft-wrap),
+# so a single-line grep only ever captures the first fragment. Reassemble it
+# by reading every line from the most recent "https://..." start through the
+# next blank line and concatenating them — the CLI wraps mid-token with no
+# separator, so lines are joined with no space between them.
 
 OUT="${1:-/config/claude-login-url.txt}"
 
-url=$(tmux capture-pane -p -J -t claude -S -500 2>/dev/null \
-    | grep -oE "https://(claude\.(com|ai)|console\.anthropic\.com|platform\.claude\.com)[^[:space:]\"'\`)<>]*" \
-    | tail -1)
+url=$(tmux capture-pane -p -J -t claude -S -500 2>/dev/null | awk '
+    /^https:\/\/(claude\.(com|ai)|console\.anthropic\.com|platform\.claude\.com)/ {
+        url = $0
+        collecting = 1
+        next
+    }
+    collecting {
+        if (NF == 0) { collecting = 0 }
+        else { url = url $0 }
+    }
+    END { print url }
+')
 
 if [ -z "$url" ]; then
     echo "No login URL found in the Claude session." >&2
