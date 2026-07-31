@@ -29,7 +29,7 @@ panel_admin: true
 ports:
   7681/tcp: null
 ports_description:
-  7681/tcp: "Web terminal (not required for ingress)"
+  7681/tcp: "Direct web terminal access. Not needed for ingress, and NOT password-protected: anyone who can reach this port gets a root shell in the container, with no Home Assistant login. Leave unset unless the port is firewalled."
 
 # Add-on configuration options
 options:
