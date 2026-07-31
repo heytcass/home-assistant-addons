@@ -62,10 +62,15 @@ map:
   - share:rw             # Shared folder between add-ons and HA
 
 # API access for Home Assistant integration
+# hassio_api + role manager: /addons (HA Smart Context lists installed
+#   add-ons) needs manager; /core/info and /host/info need only default
+# homeassistant_api: the /core/api/* proxy used by ha-context, the tmux
+#   status bar, and ha-mcp
+# No auth_api: it grants only http://supervisor/auth, which validates a Home
+#   Assistant username and password. Nothing here calls it.
 hassio_api: true
 hassio_role: manager
 homeassistant_api: true
-auth_api: true
 
 # Service startup configuration
 startup: services
