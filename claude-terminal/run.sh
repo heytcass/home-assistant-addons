@@ -315,8 +315,9 @@ start_login_url_watcher() {
 }
 
 # Build extra flags for every claude launch.
-# Note: the value is word-split; quoted multi-word arguments are not
-# re-parsed (documented limitation).
+# The value is parsed once, by the shell tmux starts the session command
+# with, so ordinary quoting works: --append-system-prompt 'be terse' arrives
+# as a single argument.
 build_claude_flags() {
     local flags=""
 
@@ -333,18 +334,17 @@ build_claude_flags() {
     echo "$flags"
 }
 
-# Determine the command ttyd runs for each client connection
-get_claude_launch_command() {
+# The command tmux runs inside the session. tmux hands this string to a
+# shell, which is the single parse claude_extra_args goes through.
+get_session_command() {
     local flags="$1"
 
     if [ "$(bashio::config 'auto_launch_claude' 'true')" = "true" ]; then
-        # tmux -A attaches to the live session on browser reconnects and HA
-        # navigation instead of stacking new ones
-        echo "tmux new-session -A -s claude 'claude${flags:+ $flags}'"
+        echo "claude${flags:+ $flags}"
     else
         # Shell mode: banner + interactive bash, still inside tmux for
         # reconnect persistence. Run 'claude' manually when ready.
-        echo "tmux new-session -A -s claude '/usr/local/bin/welcome --shell'"
+        echo "/usr/local/bin/welcome --shell"
     fi
 }
 
@@ -363,8 +363,8 @@ start_web_terminal() {
         bashio::log.warning "=========================================================="
     fi
 
-    local launch_command
-    launch_command=$(get_claude_launch_command "$flags")
+    local session_command
+    session_command=$(get_session_command "$flags")
 
     bashio::log.info "Starting web terminal on port ${port} (auto_launch_claude=$(bashio::config 'auto_launch_claude' 'true'))"
 
@@ -373,6 +373,10 @@ start_web_terminal() {
 
     # Run ttyd with keepalive configuration to prevent WebSocket disconnects
     # See: https://github.com/heytcass/home-assistant-addons/issues/24
+    #
+    # ttyd execs its argv directly, so tmux is started without an extra shell
+    # in between. tmux -A attaches to the live session on browser reconnects
+    # and HA navigation instead of stacking new ones.
     exec ttyd \
         --port "${port}" \
         --interface 0.0.0.0 \
@@ -383,7 +387,7 @@ start_web_terminal() {
         --client-option reconnectInterval=5 \
         --client-option "theme=${ttyd_theme}" \
         --client-option fontSize=14 \
-        bash -c "$launch_command"
+        tmux new-session -A -s claude "$session_command"
 }
 
 # Setup ha-mcp (Home Assistant MCP Server) for Claude Code integration
