@@ -100,19 +100,30 @@ check_node_installation() {
 check_claude_cli() {
     bashio::log.info "=== Claude CLI Check ==="
 
-    if command -v claude >/dev/null 2>&1; then
-        bashio::log.info "Claude CLI found at: $(which claude) ✓"
-
-        # Check if Claude CLI is executable
-        if [ -x "$(which claude)" ]; then
-            bashio::log.info "Claude CLI is executable ✓"
-        else
-            bashio::log.error "Claude CLI is not executable ✗"
-            return 1
-        fi
-    else
+    local claude_path
+    if ! claude_path=$(command -v claude 2>/dev/null); then
         bashio::log.error "Claude CLI not found ✗"
-        bashio::log.info "Attempting to install Claude CLI..."
+        bashio::log.info "Restart the add-on: startup installs the persistent build into /data and falls back to the bundled copy at /usr/local/bin/claude"
+        return 1
+    fi
+
+    bashio::log.info "Claude CLI found at: ${claude_path} ✓"
+
+    if [ ! -x "$claude_path" ]; then
+        bashio::log.error "Claude CLI is not executable ✗"
+        return 1
+    fi
+
+    # Executable is not the same as runnable: the native build is dynamically
+    # linked, so a libc mismatch makes it abort on launch with a relocation
+    # error while still being present and +x (#112). That is the failure this
+    # command exists to diagnose, so actually run it.
+    if timeout 10 "$claude_path" --version >/dev/null 2>&1; then
+        bashio::log.info "Claude CLI runs: $("$claude_path" --version 2>/dev/null) ✓"
+    else
+        bashio::log.error "Claude CLI is present but fails to run ✗"
+        bashio::log.info "Output of '${claude_path} --version':"
+        timeout 10 "$claude_path" --version 2>&1 | head -5 || true
         return 1
     fi
 }
