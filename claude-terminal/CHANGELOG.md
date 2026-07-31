@@ -1,5 +1,59 @@
 # Changelog
 
+## 2.5.2
+
+### 🐛 `claude_extra_args` with a quote left the terminal blank
+An apostrophe or quote anywhere in `claude_extra_args` stopped the terminal
+from starting at all. The option went through two shell parses instead of
+one: startup built the whole launch line as a string, wrapped the flags in
+single quotes, and handed it to `bash -c`, so an inner quote closed the
+wrapper early and bash aborted with `unexpected EOF while looking for
+matching`. tmux never started, so ttyd had nothing to attach to.
+
+ttyd executes its arguments directly rather than through a shell, so that
+outer parse was never needed and is gone. The flags are now parsed exactly
+once, by the shell tmux starts the session command with. Ordinary quoting
+works as a result, which retires the limitation the docs used to carry —
+`--append-system-prompt 'be terse'` now arrives as a single argument.
+Anything that worked before behaves the same.
+
+### 🔒 Dropped the unused `auth_api` permission
+`auth_api` grants access to exactly one Supervisor endpoint,
+`http://supervisor/auth`, which validates a Home Assistant username and
+password. Nothing in the add-on has ever called it. Removing it takes a
+password-checking oracle away from a terminal whose purpose is running an
+agent with shell access. The remaining API permissions are now annotated
+with what actually needs them: `/addons` (the installed-add-on list in HA
+Smart Context) is what requires `hassio_role: manager`, and
+`homeassistant_api` is what makes the `/core/api/*` proxy work — `hassio_api`
+alone does not.
+
+### 🔒 The Supervisor token is no longer written into `/data`
+Registering ha-mcp expanded `SUPERVISOR_TOKEN` at setup time, so a live
+Supervisor credential was stored verbatim in Claude Code's MCP config under
+`/data` — and `/data` goes into every Home Assistant backup. The config now
+holds the literal `${SUPERVISOR_TOKEN}`, which Claude Code expands from its
+own environment when it launches the MCP server; this is the approach
+Anthropic documents for keeping secrets out of MCP config files. Older
+Claude Code releases resolve the placeholder at registration time, which is
+the previous behaviour, so nothing regresses.
+
+### 📄 Documented who can reach the terminal
+Two things worth knowing before installing an add-on that is a root shell
+with `/config` write access:
+
+- **Non-admin Home Assistant users can open the ingress URL.**
+  `panel_admin: true` hides the sidebar entry but does not gate the URL
+  behind it — Home Assistant's ingress view requires no authentication of
+  its own and deliberately lets any signed-in user create an ingress
+  session and read the add-on's `ingress_url`. This is how ingress works
+  generally, not something this add-on can turn off.
+- **Publishing port 7681 exposes an unauthenticated shell.** The port is
+  closed by default (#83) and ingress does not need it. Mapping it anyway
+  re-creates the exposure #83 removed, because the terminal has no login of
+  its own. `ports_description` now says so instead of calling the port
+  merely "not required for ingress".
+
 ## 2.5.1
 
 ### 🐛 Blank terminal when the persistent Claude build can't run
