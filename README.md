@@ -6,11 +6,10 @@ This repository contains a custom add-on that integrates Anthropic's Claude Code
 
 To add this repository to your Home Assistant instance:
 
-1. Go to **Settings** → **Add-ons** → **Add-on Store**
-2. Click the three dots menu in the top right corner
-3. Select **Repositories**
-4. Add the URL: `https://github.com/heytcass/home-assistant-addons`
-5. Click **Add**
+1. Go to **Settings** → **Apps** and select **Install app**
+2. In the top-right corner, select the three dots menu, and select **Repositories**
+3. Add the URL: `https://github.com/heytcass/home-assistant-addons`
+4. Select **Add**
 
 ## Add-ons
 
@@ -29,7 +28,7 @@ Features:
   - Home Assistant automation help
   - Learning resources
 
-[Documentation](claude-terminal/DOCS.md)
+[Documentation](claude-terminal/DOCS.md) · [Development guide](DEVELOPMENT.md)
 
 ## Community Tools
 
