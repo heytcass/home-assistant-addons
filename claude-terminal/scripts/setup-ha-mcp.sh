@@ -40,9 +40,19 @@ configure_ha_mcp_server() {
     # via XDG_DATA_HOME, so it downloads once).
     # --index-strategy unsafe-best-match: the HA wheels index doesn't carry
     # every version, so let uv consider all indexes (#77/#79)
+    #
+    # HOMEASSISTANT_TOKEN is stored as the literal string ${SUPERVISOR_TOKEN}
+    # — single quotes on purpose, so this shell does not expand it. Claude
+    # Code expands ${VAR} from its own environment when it launches the MCP
+    # server, which keeps the Supervisor token out of the on-disk MCP config
+    # under /data (and therefore out of Home Assistant backups). run.sh
+    # already runs under with-contenv, so SUPERVISOR_TOKEN is in the
+    # environment ttyd, tmux, and claude inherit; tmux.conf also lists it in
+    # update-environment so re-attached sessions keep it.
+    # shellcheck disable=SC2016  # literal ${SUPERVISOR_TOKEN} is the point
     if claude mcp add home-assistant \
         --env "HOMEASSISTANT_URL=http://supervisor/core" \
-        --env "HOMEASSISTANT_TOKEN=${SUPERVISOR_TOKEN}" \
+        --env 'HOMEASSISTANT_TOKEN=${SUPERVISOR_TOKEN}' \
         -- uvx --python 3.13 --index-strategy unsafe-best-match "ha-mcp@${version}"; then
         bashio::log.info "ha-mcp ${version} configured for Claude Code"
 
@@ -54,7 +64,7 @@ configure_ha_mcp_server() {
         bashio::log.info "Pre-warming ha-mcp environment in background"
     else
         bashio::log.warning "Failed to configure ha-mcp - continuing without MCP integration"
-        bashio::log.warning "You can manually run: claude mcp add home-assistant --env HOMEASSISTANT_URL=http://supervisor/core --env HOMEASSISTANT_TOKEN=\$SUPERVISOR_TOKEN -- uvx --python 3.13 --index-strategy unsafe-best-match ha-mcp@${version}"
+        bashio::log.warning "You can manually run: claude mcp add home-assistant --env HOMEASSISTANT_URL=http://supervisor/core --env 'HOMEASSISTANT_TOKEN=\${SUPERVISOR_TOKEN}' -- uvx --python 3.13 --index-strategy unsafe-best-match ha-mcp@${version}"
     fi
 }
 
