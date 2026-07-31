@@ -57,7 +57,7 @@ See [DOCS.md](DOCS.md) for full documentation, terminal tips (scrolling, copy/pa
 
 - [Claude Code Documentation](https://docs.anthropic.com/en/docs/claude-code)
 - [Claude Code GitHub Repository](https://github.com/anthropics/claude-code)
-- [Home Assistant Add-ons](https://www.home-assistant.io/addons/)
+- [Home Assistant Apps](https://www.home-assistant.io/apps/)
 
 ## Credits
 

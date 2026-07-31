@@ -241,18 +241,22 @@ podman volume prune
 Once testing is complete:
 
 ```bash
-# Commit changes
-git add .
-git commit -m "feature: description of changes"
-
-# Update version in config.yaml
+# Bump the version and add a CHANGELOG entry first — both are part of the
+# commit, and release.yml fails if a tag doesn't match config.yaml's version
 vim claude-terminal/config.yaml
+vim claude-terminal/CHANGELOG.md
 
-# Push to main branch
+# Commit and push
+git add .
+git commit -m "fix(claude-terminal): description of changes"
 git push origin main
 ```
 
-The changes will automatically be built and distributed to Home Assistant users.
+Pushing to `main` builds the per-architecture images and pushes them to GHCR
+(`publish-images.yml`). Home Assistant installs pull the tag matching
+`version:` in `config.yaml`, so an unbumped version ships nothing new.
+Tagging `v<version>` additionally creates the GitHub release, with the body
+taken from the matching `CHANGELOG.md` section.
 
 ## Advanced Testing
 
@@ -270,10 +274,8 @@ podman run -d --name test-ha-claude -p 7681:7681 \
 ### Cross-Platform Testing
 
 ```bash
-# Test different base images
+# Test the other supported base image (armv7 was dropped in 2.5.0 — see the
+# arch list in config.yaml)
 podman build --build-arg BUILD_FROM=ghcr.io/home-assistant/aarch64-base:3.21 \
   -t local/claude-terminal:arm64 ./claude-terminal
-
-podman build --build-arg BUILD_FROM=ghcr.io/home-assistant/armv7-base:3.21 \
-  -t local/claude-terminal:armv7 ./claude-terminal
 ```
