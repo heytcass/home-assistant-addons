@@ -32,15 +32,19 @@ configure_ha_mcp_server() {
     local version
     version=$(bashio::config 'ha_mcp_version' '7.11.0')
 
-    # Remove existing ha-mcp configuration if present (to ensure clean state)
-    claude mcp remove home-assistant 2>/dev/null || true
+    # Remove existing ha-mcp configuration if present (to ensure clean state).
+    # Both claude calls below run on the boot path, so they must never block
+    # startup: a claude binary that wedges (e.g. spinning at 100% CPU on a VM
+    # whose virtual CPU masks AVX, #126) would otherwise hang the add-on at
+    # "Setting up ha-mcp" forever. These are local config edits — 30s is ample.
+    timeout 30 claude mcp remove home-assistant 2>/dev/null || true
 
     # ha-mcp >= 4.x requires CPython 3.13 exactly, which no Alpine release
     # ships — uv provisions a managed musl 3.13 build (persisted under /data
     # via XDG_DATA_HOME, so it downloads once).
     # --index-strategy unsafe-best-match: the HA wheels index doesn't carry
     # every version, so let uv consider all indexes (#77/#79)
-    if claude mcp add home-assistant \
+    if timeout 30 claude mcp add home-assistant \
         --env "HOMEASSISTANT_URL=http://supervisor/core" \
         --env "HOMEASSISTANT_TOKEN=${SUPERVISOR_TOKEN}" \
         -- uvx --python 3.13 --index-strategy unsafe-best-match "ha-mcp@${version}"; then
