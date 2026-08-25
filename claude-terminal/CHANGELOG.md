@@ -1,5 +1,35 @@
 # Changelog
 
+## 2.5.2
+
+### 🐛 OAuth login URL no longer truncated by `claude-login-url`
+Claude Code's login screen hard-wraps the OAuth URL across multiple
+physical lines using real line breaks from its own rendering, which
+`tmux capture-pane -J` does not rejoin (it only handles the terminal's
+soft-wrap). The line-based extraction in `claude-login-url` therefore
+only ever captured the first fragment of the URL and silently dropped
+the tail — including the `state` parameter — so authorization failed
+with `OAuth error: Request failed with status code 400` (#119, #122).
+The URL is now reassembled from every wrapped line, restoring the full
+URL regardless of terminal width.
+
+### ✨ Login URL delivered as a Home Assistant notification
+The browser terminal's "c to copy" for the login URL can't be relied on:
+Claude Code emits the OSC 52 copy sequence twice per keypress, the two
+copies race the browser's async Clipboard API, and the clipboard write
+silently never lands — even with tmux, ttyd, and browser permissions all
+correctly configured. And the `claude-login-url` fallback required SSH
+plus a manual multi-step file dance.
+
+A background watcher now polls the Claude tmux pane and, the moment a
+login URL appears, posts it as a clickable persistent notification in
+the Home Assistant UI — no SSH, File Editor, or clipboard needed. The
+notification dismisses itself automatically once login succeeds.
+
+Both contributed by [@heman22union](https://github.com/heman22union)
+(#123, #124); thanks [@Ngooser](https://github.com/Ngooser) for the
+root-cause diagnosis in #122.
+
 ## 2.5.1
 
 ### 🐛 Blank terminal when the persistent Claude build can't run
