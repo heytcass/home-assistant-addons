@@ -110,7 +110,8 @@ setup_commands() {
         "persist-install:/opt/scripts/persist-install.sh" \
         "ha-context:/opt/scripts/ha-context.sh" \
         "claude-doctor:/opt/scripts/health-check.sh" \
-        "claude-login-url:/opt/scripts/claude-login-url.sh"; do
+        "claude-login-url:/opt/scripts/claude-login-url.sh" \
+        "login-url-watcher:/opt/scripts/login-url-watcher.sh"; do
         name="${entry%%:*}"
         script="${entry#*:}"
         if [ -f "$script" ]; then
@@ -284,6 +285,17 @@ generate_ha_context() {
     fi
 }
 
+# Deliver Claude Code's OAuth login URL as a clickable HA notification the
+# moment it appears, so login works with no manual steps (SSH, File Editor,
+# clipboard) needed — see login-url-watcher.sh for why the clipboard path
+# can't be relied on.
+start_login_url_watcher() {
+    if [ -f /usr/local/bin/login-url-watcher ]; then
+        bashio::log.info "Starting login URL watcher in background"
+        (/usr/local/bin/login-url-watcher >/dev/null 2>&1 || true) &
+    fi
+}
+
 # Build extra flags for every claude launch.
 # Note: the value is word-split; quoted multi-word arguments are not
 # re-parsed (documented limitation).
@@ -376,6 +388,7 @@ main() {
     update_claude
     install_persistent_packages
     generate_ha_context
+    start_login_url_watcher
     setup_ha_mcp
     start_web_terminal
 }
