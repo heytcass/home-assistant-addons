@@ -27,6 +27,32 @@ check_system_resources() {
     fi
 }
 
+check_cpu_capabilities() {
+    bashio::log.info "=== CPU Capability Check ==="
+
+    # Claude Code's runtime (Bun) requires AVX on x86-64. Hypervisor default
+    # CPU types (Proxmox/QEMU kvm64, qemu64) mask it even when the physical
+    # CPU has it, and every claude invocation then crashes or spins at 100%
+    # CPU with no output (#126). Not applicable on aarch64.
+    if [ "$(uname -m)" != "x86_64" ]; then
+        bashio::log.info "Architecture $(uname -m): AVX check not applicable ✓"
+        return 0
+    fi
+
+    if grep -q avx /proc/cpuinfo; then
+        bashio::log.info "CPU exposes AVX ✓"
+    else
+        bashio::log.error "CPU does not expose AVX ✗"
+        bashio::log.info "Claude Code's runtime (Bun) requires AVX; without it every"
+        bashio::log.info "claude invocation hangs at 100% CPU or crashes with SIGILL."
+        bashio::log.info "On a VM this usually means the hypervisor hides the host CPU:"
+        bashio::log.info "  • Proxmox/QEMU: set the VM's CPU type to 'host' (not kvm64/qemu64),"
+        bashio::log.info "    then fully shut the VM down and start it (a reboot is not enough)"
+        bashio::log.info "  • Other hypervisors: enable host CPU passthrough"
+        return 1
+    fi
+}
+
 check_directory_permissions() {
     bashio::log.info "=== Directory Permissions Check ==="
 
@@ -141,6 +167,7 @@ run_diagnostics() {
     local errors=0
 
     check_system_resources || ((errors++))
+    check_cpu_capabilities || ((errors++))
     check_directory_permissions || ((errors++))
     check_node_installation || ((errors++))
     check_claude_cli || ((errors++))
@@ -183,6 +210,9 @@ run_diagnostics() {
             bashio::log.info ""
             bashio::log.info "=== Virtual Environment Detected (Possibly Proxmox) ==="
             bashio::log.info "If running in Proxmox, ensure:"
+            bashio::log.info "  • VM CPU type is 'host' — the default kvm64/qemu64 types hide"
+            bashio::log.info "    AVX, which Claude Code requires (see CPU Capability Check above);"
+            bashio::log.info "    apply with a full VM shutdown + start, not a reboot"
             bashio::log.info "  • VM has sufficient resources (2GB+ RAM)"
             bashio::log.info "  • Network device uses VirtIO (recommended)"
             bashio::log.info "  • Firewall rules allow container registry access"

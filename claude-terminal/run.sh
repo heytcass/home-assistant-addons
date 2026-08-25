@@ -194,7 +194,13 @@ update_claude() {
 
     bashio::log.info "Installing persistent Claude Code into /data (background)..."
     (
-        if curl -fsSL --connect-timeout 10 https://claude.ai/install.sh | bash >/dev/null 2>&1 \
+        # Download the installer to a file instead of `curl | bash`: with the
+        # pipe, the claude binary the script launches inherits that pipe as
+        # stdin and can block forever reading from it once curl exits (#126).
+        # A file plus stdin from /dev/null gives every child a closed stdin.
+        installer=$(mktemp /tmp/claude-install.XXXXXX.sh)
+        if curl -fsSL --connect-timeout 10 https://claude.ai/install.sh -o "$installer" \
+            && bash "$installer" </dev/null >/dev/null 2>&1 \
             && [ -x "$HOME/.local/bin/claude" ] && native_claude_runs; then
             bashio::log.info "Persistent Claude Code installed: $("$HOME/.local/bin/claude" --version 2>/dev/null || echo 'version unknown')"
         else
@@ -203,7 +209,19 @@ update_claude() {
             rm -f "$HOME/.local/bin/claude"
             bashio::log.warning "Native Claude Code install unavailable or unrunnable; using bundled copy"
         fi
+        rm -f "$installer"
     ) &
+}
+
+# Claude Code's runtime (Bun) requires AVX on x86-64. Hypervisor default CPU
+# types (Proxmox/QEMU kvm64, qemu64) mask it even when the host CPU has it,
+# and every claude invocation then crashes or spins at 100% CPU (#126).
+# Warn in the add-on log, since the terminal itself is unusable in that state.
+check_cpu_features() {
+    if [ "$(uname -m)" = "x86_64" ] && ! grep -q avx /proc/cpuinfo; then
+        bashio::log.warning "This CPU does not expose AVX — Claude Code will likely hang or crash on every invocation"
+        bashio::log.warning "On a Proxmox/QEMU VM, set the VM's CPU type to 'host', then fully shut the VM down and start it again (a reboot is not enough)"
+    fi
 }
 
 # Install persistent packages from config and saved state
@@ -384,6 +402,7 @@ main() {
     bashio::log.info "Starting Claude Terminal add-on..."
 
     init_environment
+    check_cpu_features
     setup_commands
     update_claude
     install_persistent_packages
