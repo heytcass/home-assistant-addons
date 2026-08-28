@@ -16,18 +16,27 @@
 # by reading every line from the most recent "https://..." start through the
 # next blank line and concatenating them — the CLI wraps mid-token with no
 # separator, so lines are joined with no space between them.
+#
+# The URL is located anywhere on the line rather than anchored at column 0,
+# and every fragment is reduced to its run of URL characters: Claude Code may
+# render the login prompt indented or inside a bordered panel, and that
+# indentation (or border) would otherwise either defeat the match entirely or
+# be spliced into the middle of the reassembled URL.
 
 OUT="${1:-/config/claude-login-url.txt}"
 
 url=$(tmux capture-pane -p -J -t claude -S -500 2>/dev/null | awk '
-    /^https:\/\/(claude\.(com|ai)|console\.anthropic\.com|platform\.claude\.com)/ {
-        url = $0
+    $0 ~ /https:\/\/(claude\.(com|ai)|console\.anthropic\.com|platform\.claude\.com)/ {
+        match($0, /https:\/\/[A-Za-z0-9._~:\/?#@!$&()*+,;=%-]*/)
+        url = substr($0, RSTART, RLENGTH)
         collecting = 1
         next
     }
     collecting {
         if (NF == 0) { collecting = 0 }
-        else { url = url $0 }
+        else if (match($0, /[A-Za-z0-9._~:\/?#@!$&()*+,;=%-]+/)) {
+            url = url substr($0, RSTART, RLENGTH)
+        }
     }
     END { print url }
 ')
