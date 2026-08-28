@@ -1,5 +1,49 @@
 # Changelog
 
+## 2.5.3
+
+### 🐛 A wedged `claude` binary no longer blocks add-on startup
+The `claude mcp remove` / `claude mcp add` calls that configure ha-mcp ran on
+the boot path with no timeout, so a `claude` binary that hangs on launch stalled
+the whole add-on indefinitely at `Setting up ha-mcp` — the web terminal never
+started at all. Both calls now run under a 30-second timeout: worst case the
+add-on boots with a warning instead of never booting.
+
+The background installer also ran via `curl | bash`, which left the process it
+launched inheriting a pipe as stdin that nothing ever wrote to — a second way to
+hang forever. It now runs from a downloaded file with stdin closed.
+
+Reported with exceptionally thorough diagnostics by
+[@fuzzyjt](https://github.com/fuzzyjt) (#126).
+
+### ⚠️ Missing AVX support is now reported instead of hanging silently
+Claude Code's runtime requires AVX on x86-64. Hypervisors that default to a
+generic virtual CPU (Proxmox/QEMU `kvm64` or `qemu64`) hide it from the guest
+even when the physical CPU has it, and every `claude` invocation then spins at
+100% CPU with no output — including `claude --version`. Startup and
+`claude-doctor` now check for AVX and say so plainly, naming the fix: set the
+VM's CPU type to `host`, then fully shut the VM down and start it again (a
+reboot does not re-read the CPU configuration).
+
+This is an environment problem rather than an add-on bug, but it presented as a
+completely dead terminal with nothing in the log to explain it.
+
+### 🐛 Login URL found when the prompt is indented or bordered
+The login URL extraction only matched a URL starting at column 0, so it found
+nothing when Claude Code renders the login prompt indented or inside a bordered
+panel — the notification would never appear, and `claude-login-url` would report
+"No login URL found." The URL is now located anywhere on the line, and each
+wrapped fragment is reduced to its URL characters so the indentation or border
+is not spliced into the middle of the reassembled URL.
+
+### 🐛 Stale login notification cleared on startup
+A login URL's `state` and PKCE challenge belong to the specific `claude` process
+that produced them, but Home Assistant's persistent notifications outlive the
+add-on. A notification left over from a previous container therefore pointed at
+a process that no longer existed: authorizing against it failed every time, with
+nothing to indicate the link was simply dead. Any leftover notification is now
+dismissed when the watcher starts, before it publishes a current one.
+
 ## 2.5.2
 
 ### 🐛 OAuth login URL no longer truncated by `claude-login-url`
