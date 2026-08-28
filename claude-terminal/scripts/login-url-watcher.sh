@@ -70,6 +70,14 @@ dismiss() {
         http://supervisor/core/api/services/persistent_notification/dismiss >/dev/null 2>&1
 }
 
+# Clear any notification left over from a previous container before the loop
+# starts publishing current ones. The login URL's state/PKCE challenge belongs
+# to the specific `claude` process that produced it, and Home Assistant's
+# persistent notifications outlive the add-on — so a notification surviving a
+# restart points at a process that no longer exists, and authorizing against
+# it fails every time with no hint that the link is simply dead.
+dismiss
+
 last_url=""
 notified=0
 
