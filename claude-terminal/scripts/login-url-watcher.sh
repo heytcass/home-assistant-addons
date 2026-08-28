@@ -14,20 +14,28 @@
 #
 # Runs as a background loop for the life of the container (started once from
 # run.sh); cheap when idle since it only polls a local tmux pane.
+#
+# The URL is located anywhere on the line rather than anchored at column 0,
+# and every fragment is reduced to its run of URL characters, so an indented
+# or bordered login prompt neither defeats the match nor splices stray
+# characters into the middle of the reassembled URL.
 
 NOTIFICATION_ID="claude_login_url"
 POLL_INTERVAL=3
 
 extract_url() {
     tmux capture-pane -p -J -t claude -S -500 2>/dev/null | awk '
-        /^https:\/\/(claude\.(com|ai)|console\.anthropic\.com|platform\.claude\.com)/ {
-            url = $0
+        $0 ~ /https:\/\/(claude\.(com|ai)|console\.anthropic\.com|platform\.claude\.com)/ {
+            match($0, /https:\/\/[A-Za-z0-9._~:\/?#@!$&()*+,;=%-]*/)
+            url = substr($0, RSTART, RLENGTH)
             collecting = 1
             next
         }
         collecting {
             if (NF == 0) { collecting = 0 }
-            else { url = url $0 }
+            else if (match($0, /[A-Za-z0-9._~:\/?#@!$&()*+,;=%-]+/)) {
+                url = url substr($0, RSTART, RLENGTH)
+            }
         }
         END { print url }
     '
