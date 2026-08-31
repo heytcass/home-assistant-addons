@@ -1,5 +1,58 @@
 # Changelog
 
+## 2.5.4
+
+### 🐛 Quotes in `claude_extra_args` no longer kill the terminal
+Any apostrophe or quote in `claude_extra_args` left the terminal blank: the
+value went through two shell parses, so an inner quote closed the wrapper
+early and the tmux session never started. ttyd execs its argv directly, so
+the outer parse was never needed — the session command now reaches tmux as
+one argument and is parsed exactly once. Ordinary quoting like
+`--append-system-prompt 'be terse'` now works, retiring the documented
+"quoted multi-word arguments are not supported" limitation.
+
+### 🔒 Supervisor token no longer written into backups
+The ha-mcp registration expanded `${SUPERVISOR_TOKEN}` at setup time, storing
+a live Supervisor credential verbatim in the MCP config under `/data` — which
+is included in every Home Assistant backup. The literal `${SUPERVISOR_TOKEN}`
+is now stored instead, and Claude Code expands it from its own environment
+when it launches the MCP server.
+
+### 🔒 Unused `auth_api` permission dropped
+`auth_api` unlocks only the Supervisor's username/password-validation
+endpoint, which nothing in this add-on calls. Removing it takes a
+password-checking oracle away from a terminal running an agent with shell
+access, and improves the add-on's security rating. The remaining API
+permissions are now annotated with what actually needs them.
+
+### 🧹 Superseded Claude Code binaries pruned from persistent storage
+The native CLI self-updates through its own path even with
+`claude_auto_update: false` (its `autoUpdatesProtectedForNative` flag exempts
+native installs from the toggle), leaving a ~250 MB binary behind on every
+update — dead weight carried into every backup, the same failure mode as the
+npm cache fixed in 2.3.0 (#103). Old versions are now pruned on every boot
+and after background updates, keeping the active version plus the newest for
+rollback (#114).
+
+### 🩺 `claude-doctor` now detects a present-but-unrunnable Claude
+The diagnostic only checked that `claude` existed and was executable — which
+is precisely the state a libc mismatch (#112) produces, so the one command
+users are told to run reported ✓ on the exact failure it exists to diagnose.
+It now actually runs `claude --version` and prints the real error on failure.
+
+### 📚 Documentation accuracy pass
+Removed the orphaned root `DOCS.md` (an unlinked second copy describing
+commands, paths, and a security posture that don't exist), updated install
+steps for Home Assistant's renamed Apps UI, fixed a 404'd link, and
+documented who can actually reach the terminal: any signed-in HA user can
+open the ingress URL (upstream HA behaviour — `panel_admin` only hides the
+sidebar entry), and publishing port 7681 exposes an unauthenticated shell.
+
+Most of this release was contributed by [@umrath](https://github.com/umrath)
+(#120, #121 — landed via #132, #133); thanks
+[@SerpentRIX](https://github.com/SerpentRIX) for the binary-pileup
+diagnosis in #114.
+
 ## 2.5.3
 
 ### 🐛 A wedged `claude` binary no longer blocks add-on startup
