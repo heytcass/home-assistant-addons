@@ -22,6 +22,8 @@ Your credentials are stored under `/data` and persist across restarts and add-on
 |--------|---------|-------------|
 | `auto_launch_claude` | `true` | Start Claude immediately when the terminal opens. Set to `false` to get a shell instead (run `claude` yourself). |
 | `claude_auto_update` | `true` | Keep Claude Code current: installs the official native build into `/data` and updates it in the background on each startup. |
+| `working_directory` | `""` | Directory the terminal session starts in (default `/config`), e.g. `/config/ai_repo`. Claude asks its one-time folder-trust question on first use of a new directory. A non-existent path falls back to `/config` with a warning. |
+| `claude_code_oauth_token` | `""` | Long-lived token from `claude setup-token`, for non-interactive authentication — useful when the OAuth browser flow is impractical. Note: token auth cannot establish [Remote Control](https://code.claude.com/docs/en/remote-control) sessions; use the normal login for that. Stored in the add-on configuration (masked in the UI, but included in HA backups like all add-on options). |
 | `dangerously_skip_permissions` | `false` | Launch Claude with `--dangerously-skip-permissions` (no confirmation prompts). **Read the security note below.** |
 | `claude_extra_args` | `""` | Extra flags appended to every Claude launch, e.g. `--model claude-sonnet-5`. Parsed like a shell command line, so quoting works: `--append-system-prompt 'be terse'` arrives as one argument. |
 | `ha_smart_context` | `true` | Generate a CLAUDE.md with your HA system info so Claude knows your setup. |

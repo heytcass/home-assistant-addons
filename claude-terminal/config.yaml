@@ -35,6 +35,8 @@ ports_description:
 options:
   auto_launch_claude: true
   claude_auto_update: true
+  working_directory: ""
+  claude_code_oauth_token: ""
   dangerously_skip_permissions: false
   claude_extra_args: ""
   ha_smart_context: true
@@ -45,6 +47,8 @@ options:
 schema:
   auto_launch_claude: bool?
   claude_auto_update: bool?
+  working_directory: str?
+  claude_code_oauth_token: password?
   dangerously_skip_permissions: bool?
   claude_extra_args: str?
   ha_smart_context: bool?
