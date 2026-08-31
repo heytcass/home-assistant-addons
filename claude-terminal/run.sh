@@ -49,6 +49,10 @@ init_environment() {
     # gigabytes (#103). The cache now lives in /tmp (npm_config_cache env).
     rm -rf "$data_home/.npm"
 
+    # Same class of backup bloat, different directory (#114): superseded CLI
+    # binaries accumulate in versions/. XDG_DATA_HOME is exported above.
+    prune_claude_versions
+
     # Migrate any existing authentication files from legacy locations
     migrate_legacy_auth_files "$claude_config_dir"
 
@@ -99,6 +103,37 @@ migrate_legacy_auth_files() {
 
     if [ "$migrated" = false ]; then
         bashio::log.info "No legacy authentication files to migrate"
+    fi
+}
+
+# The native CLI self-updates through its own path even when
+# claude_auto_update is false (autoUpdatesProtectedForNative exempts native
+# installs from the autoUpdates toggle), leaving a ~250 MB binary behind in
+# versions/ on every update — dead weight carried into every HA backup from
+# then on (#114; same failure mode as the npm cache in #103). Keep the
+# version the active symlink resolves to plus the newest entry (rollback),
+# prune the rest. A pruned binary that is mid-execution keeps running — the
+# inode stays alive until the process exits — so no session check is needed.
+# Runs unconditionally: the growth is not governed by claude_auto_update.
+prune_claude_versions() {
+    local versions_dir="$XDG_DATA_HOME/claude/versions"
+    [ -d "$versions_dir" ] || return 0
+
+    local active newest entry pruned=0
+    active=$(readlink -f "$HOME/.local/bin/claude" 2>/dev/null || true)
+    # busybox-safe newest-entry lookup (find -printf is not guaranteed)
+    newest="$versions_dir/$(ls -1t "$versions_dir" 2>/dev/null | head -1)"
+
+    for entry in "$versions_dir"/*; do
+        [ -e "$entry" ] || continue
+        [ "$entry" = "$active" ] && continue
+        [ "$entry" = "$newest" ] && continue
+        rm -rf "$entry"
+        pruned=$((pruned + 1))
+    done
+
+    if [ "$pruned" -gt 0 ]; then
+        bashio::log.info "Pruned $pruned old Claude Code version(s) from persistent storage"
     fi
 }
 
@@ -188,6 +223,9 @@ update_claude() {
                 bashio::log.warning "Updated Claude Code no longer runs in this image; removing it and falling back to the bundled copy"
                 rm -f "$HOME/.local/bin/claude"
             fi
+            # The update may have superseded a version; don't let the old
+            # binary sit in backups until the next restart (#114).
+            prune_claude_versions
         ) &
         return 0
     fi
