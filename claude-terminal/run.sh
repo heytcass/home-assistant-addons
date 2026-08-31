@@ -372,6 +372,38 @@ build_claude_flags() {
     echo "$flags"
 }
 
+# Directory the session starts in. Defaults to /config; a configured value
+# must exist, or we warn and fall back — a typo'd path must never take the
+# terminal down. Claude Code shows its one-time per-directory trust prompt
+# on first use of a new directory (stored in ~/.claude.json), then remembers.
+get_working_directory() {
+    local dir
+    dir=$(bashio::config 'working_directory' '')
+    if [ -z "$dir" ] || [ "$dir" = "null" ]; then
+        echo "/config"
+        return 0
+    fi
+    if [ -d "$dir" ]; then
+        echo "$dir"
+    else
+        bashio::log.warning "working_directory '$dir' does not exist; starting in /config instead"
+        echo "/config"
+    fi
+}
+
+# Non-interactive auth (#116): a token from `claude setup-token` set here
+# reaches the auto-launched claude via the environment — the tmux session
+# command runs through a non-interactive shell, so ~/.bashrc exports never
+# reach it. The value itself is never logged.
+export_oauth_token() {
+    local token
+    token=$(bashio::config 'claude_code_oauth_token' '')
+    if [ -n "$token" ] && [ "$token" != "null" ]; then
+        export CLAUDE_CODE_OAUTH_TOKEN="$token"
+        bashio::log.info "CLAUDE_CODE_OAUTH_TOKEN set from add-on configuration"
+    fi
+}
+
 # The command tmux runs inside the session. tmux hands this string to a
 # shell, which is the single parse claude_extra_args goes through.
 get_session_command() {
@@ -401,8 +433,9 @@ start_web_terminal() {
         bashio::log.warning "=========================================================="
     fi
 
-    local session_command
+    local session_command workdir
     session_command=$(get_session_command "$flags")
+    workdir=$(get_working_directory)
 
     bashio::log.info "Starting web terminal on port ${port} (auto_launch_claude=$(bashio::config 'auto_launch_claude' 'true'))"
 
@@ -425,7 +458,7 @@ start_web_terminal() {
         --client-option reconnectInterval=5 \
         --client-option "theme=${ttyd_theme}" \
         --client-option fontSize=14 \
-        tmux new-session -A -s claude "$session_command"
+        tmux new-session -A -s claude -c "$workdir" "$session_command"
 }
 
 # Setup ha-mcp (Home Assistant MCP Server) for Claude Code integration
@@ -445,6 +478,7 @@ main() {
 
     init_environment
     check_cpu_features
+    export_oauth_token
     setup_commands
     update_claude
     install_persistent_packages
