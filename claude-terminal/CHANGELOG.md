@@ -1,5 +1,34 @@
 # Changelog
 
+## 2.5.5
+
+### ✨ `working_directory` — start the session somewhere other than `/config`
+Set it to e.g. `/config/ai_repo` and the terminal opens there instead of
+`/config`. Claude Code asks its one-time folder-trust question the first time
+it sees a new directory and remembers the answer after that; the rest of
+`/config` stays reachable through the usual permission prompts (or
+unrestricted when `dangerously_skip_permissions` is on). A path that doesn't
+exist logs a warning and falls back to `/config` rather than leaving you with
+a dead terminal.
+
+Adapted from [@heman22union](https://github.com/heman22union)'s #91.
+
+### ✨ `claude_code_oauth_token` — non-interactive authentication
+A long-lived token from `claude setup-token` can now be set in the add-on
+configuration, for setups where the browser OAuth flow is impractical. The
+token reaches the auto-launched Claude through the environment, which is what
+the previous workarounds could not do: the tmux session command runs through a
+*non-interactive* shell, so exports in `~/.bashrc` or `~/.profile` were only
+ever picked up when `claude` was started by hand (#116).
+
+The option is masked in the Home Assistant UI and never written to the log —
+but like all add-on options it is stored in the add-on configuration, which is
+included in Home Assistant backups. Note that token authentication cannot
+establish [Remote Control](https://code.claude.com/docs/en/remote-control)
+sessions; use the normal login for that.
+
+Reported by [@MichaelPihlblad](https://github.com/MichaelPihlblad) (#116).
+
 ## 2.5.4
 
 ### 🐛 Quotes in `claude_extra_args` no longer kill the terminal
