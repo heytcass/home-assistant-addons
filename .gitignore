@@ -10,7 +10,7 @@ yarn.lock
 # Logs
 *.log
 
-# Build files
+# Build files (dist/ also holds scripts/dev-deploy.sh output)
 build/
 dist/
 

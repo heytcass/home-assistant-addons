@@ -1,17 +1,83 @@
 name: Release
 
+# Releasing is a deliberate act: pushing a v<version> tag. Merging to main
+# ships nothing — the Supervisor pulls the GHCR image tagged with the
+# version in config.yaml, and that tag is only ever built here. (Publishing
+# on every push to main used to silently overwrite the image fresh installs
+# pull, with whatever happened to be on main.)
+#
+# Order matters: images first, GitHub release second, so a release never
+# announces a version the Supervisor cannot pull. workflow_dispatch rebuilds
+# the images for the version currently in config.yaml without creating a
+# release (e.g. after a base-image security fix).
+
 on:
   push:
     tags:
       - "v*"
-
-permissions:
-  contents: write
+  workflow_dispatch:
 
 jobs:
+  validate:
+    name: Validate tag
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tag must match config.yaml
+        run: |
+          config_version=$(grep '^version:' claude-terminal/config.yaml | sed 's/version: *"\?\([^"]*\)"\?/\1/')
+          tag_version="${GITHUB_REF_NAME#v}"
+          if [ "$config_version" != "$tag_version" ]; then
+            echo "::error::Tag version ($tag_version) does not match config.yaml version ($config_version)"
+            exit 1
+          fi
+          echo "Version $tag_version validated"
+
+  publish:
+    name: Publish (${{ matrix.arch }})
+    # `always()` lets the job run on workflow_dispatch, where validate is
+    # skipped; the result check still blocks a mismatched tag.
+    if: always() && (needs.validate.result == 'success' || needs.validate.result == 'skipped')
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        # armv7 is not supported by current HA builder releases (32-bit ARM
+        # was dropped upstream)
+        arch: [aarch64, amd64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push add-on image
+        uses: home-assistant/builder@2026.02.1
+        with:
+          args: |
+            --${{ matrix.arch }} \
+            --target /data/claude-terminal \
+            --image "${{ matrix.arch }}-addon-claude-terminal" \
+            --docker-hub "ghcr.io/${{ github.repository_owner }}" \
+            --addon
+
   release:
     name: Create GitHub Release
+    if: github.event_name == 'push'
+    needs: publish
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -19,18 +85,7 @@ jobs:
         id: version
         run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
-      - name: Validate tag matches config.yaml
-        run: |
-          config_version=$(grep '^version:' claude-terminal/config.yaml | sed 's/version: *"\?\([^"]*\)"\?/\1/')
-          tag_version="${{ steps.version.outputs.version }}"
-          if [ "$config_version" != "$tag_version" ]; then
-            echo "::error::Tag version ($tag_version) does not match config.yaml version ($config_version)"
-            exit 1
-          fi
-          echo "Version $tag_version validated"
-
       - name: Extract changelog for this version
-        id: changelog
         run: |
           version="${{ steps.version.outputs.version }}"
           # Extract content between this version's header and the next ## header

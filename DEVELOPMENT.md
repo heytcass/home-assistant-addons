@@ -236,27 +236,69 @@ podman image prune
 podman volume prune
 ```
 
-## Production Deployment
+## Testing on a real Home Assistant box
 
-Once testing is complete:
+The container tests above prove the image builds and boots, but not how it
+behaves under a real Supervisor (ingress, bashio reading real options, the
+Supervisor API, OAuth in a real browser, backups). Before any release, run
+the change on your own Home Assistant as a **local add-on**, next to the
+released one:
 
 ```bash
-# Bump the version and add a CHANGELOG entry first — both are part of the
-# commit, and release.yml fails if a tag doesn't match config.yaml's version
-vim claude-terminal/config.yaml
-vim claude-terminal/CHANGELOG.md
+# Push the working tree to HA over SSH (Advanced SSH add-on with protection
+# mode off, or the HA OS host on port 22222 — both expose /addons)
+scripts/dev-deploy.sh root@homeassistant.local
 
-# Commit and push
-git add .
-git commit -m "fix(claude-terminal): description of changes"
-git push origin main
+# Or just build the folder and copy it yourself (Samba: \\homeassistant\addons)
+scripts/dev-deploy.sh
 ```
 
-Pushing to `main` builds the per-architecture images and pushes them to GHCR
-(`publish-images.yml`). Home Assistant installs pull the tag matching
-`version:` in `config.yaml`, so an unbumped version ships nothing new.
-Tagging `v<version>` additionally creates the GitHub release, with the body
-taken from the matching `CHANGELOG.md` section.
+Then in HA: **Settings → Add-ons → Add-on Store → ⋮ → Check for updates**, and
+install (or update) **Claude Terminal (dev)**. It has its own slug, its own
+`/data`, and its own sidebar entry, so the released add-on is untouched.
+The script strips the `image:` key so the Supervisor builds locally from
+your Dockerfile, and suffixes the version with the git sha so every deploy
+registers as an update. Uninstall it from the store when you are done.
+
+### Pre-release checklist
+
+- Fresh install: log in, Claude starts, `claude-doctor` is clean, MCP tools work.
+- Upgrade path: install the *previous* release as the dev add-on first, log
+  in, then deploy the new build over it. Credentials and the session must
+  survive without a re-login.
+- Restart the add-on twice and reload the browser: the same tmux session
+  comes back.
+- Toggle every option the change touches, both ways, reading the add-on log
+  each time.
+- Take a backup and check its size did not grow (see #103, #114).
+
+## Releasing
+
+Merging to `main` ships **nothing** to users. Home Assistant installs pull the
+GHCR image tagged with the `version:` in `config.yaml`, and that image is only
+built when a matching `v<version>` tag is pushed (`release.yml`). So PRs can
+land on `main` freely; a release is a separate, deliberate step:
+
+```bash
+# 1. Release commit on main: version bump + CHANGELOG entry, nothing else
+vim claude-terminal/config.yaml     # version: "x.y.z"
+vim claude-terminal/CHANGELOG.md    # ## x.y.z section at the top
+git commit -am "chore(claude-terminal): release x.y.z"
+git push origin main
+
+# 2. Tag it — this is what builds and publishes
+git tag vx.y.z
+git push origin vx.y.z
+```
+
+`release.yml` refuses a tag that does not match `config.yaml`, builds and
+pushes both architecture images, and only then creates the GitHub release
+with the matching `CHANGELOG.md` section as its body. Users see the update
+in the add-on store once the Supervisor next refreshes the repository
+(within the hour, or immediately via *Check for updates*).
+
+To rebuild the images for the current version without a new release (e.g. a
+base-image security fix), run `release.yml` manually from the Actions tab.
 
 ## Advanced Testing
 
