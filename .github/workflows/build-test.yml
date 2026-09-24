@@ -81,15 +81,18 @@ jobs:
 
       - name: Smoke test — add-on boots and serves the terminal
         if: matrix.arch == 'amd64'
-        # Runs the real entrypoint against a fake /data (options.json lives
-        # there in a real add-on). No Supervisor is present, so anything that
-        # needs one (ha-mcp, HA context) must degrade to a warning, not an
-        # error — that is exactly what this checks, along with the rule that
-        # nothing on the boot path blocks: ttyd must answer within 60s.
+        # Runs the real entrypoint with no Supervisor. bashio in this base
+        # image fetches options from the Supervisor API (not /data/options.json),
+        # so every bashio::config call logs its own "Failed to get addon config
+        # from Supervisor API" ERROR and returns empty; run.sh's defaults then
+        # apply (shell mode, no auto-update). Those bashio lines are filtered
+        # out below; any other ERROR is ours. What this proves: nothing on the
+        # boot path blocks or dies without a Supervisor, and ttyd answers
+        # within 60s.
         run: |
-          data=$(mktemp -d)
-          echo '{"auto_launch_claude": false, "claude_auto_update": false, "ha_smart_context": false}' > "$data/options.json"
-          docker run -d --name boot-test -p 7681:7681             -v "$data:/data" -v "$(mktemp -d):/config"             test/claude-terminal:amd64
+          docker run -d --name boot-test -p 7681:7681 \
+            -v "$(mktemp -d):/data" -v "$(mktemp -d):/config" \
+            test/claude-terminal:amd64
 
           ok=0
           for _ in $(seq 1 30); do
@@ -107,8 +110,10 @@ jobs:
             echo "FAIL: web terminal did not answer on port 7681 within 60s"
             exit 1
           fi
-          if grep -q 'ERROR' /tmp/boot.log; then
-            echo "FAIL: startup logged an ERROR"
+          if grep 'ERROR' /tmp/boot.log \
+              | grep -v -e 'Supervisor API' -e 'Something went wrong contacting the API' \
+              | grep -q .; then
+            echo "FAIL: startup logged an ERROR (other than bashio's expected Supervisor-API errors)"
             exit 1
           fi
           if ! grep -q 'Starting web terminal' /tmp/boot.log; then

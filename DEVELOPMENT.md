@@ -19,9 +19,12 @@ The fastest way to test changes without publishing new versions:
 podman build --build-arg BUILD_FROM=ghcr.io/home-assistant/amd64-base:3.21 \
   -t local/claude-terminal:test ./claude-terminal
 
-# 2. Create test configuration (options.json lives in /data inside a real add-on)
+# 2. Create the volumes. bashio reads options from the Supervisor API, not
+#    /data/options.json, so outside HA every option comes back empty and
+#    run.sh's defaults apply (shell mode, no auto-update). The log will show
+#    bashio "Failed to get addon config from Supervisor API" errors: expected.
+#    To test options for real, use scripts/dev-deploy.sh (see below).
 mkdir -p /tmp/test-config /tmp/test-data
-echo '{"auto_launch_claude": false}' > /tmp/test-data/options.json
 
 # 3. Run test container
 podman run -d --name test-claude-dev \
@@ -82,15 +85,9 @@ podman exec -it test-claude-dev /opt/scripts/welcome.sh
 
 #### Launch Mode Testing
 
-```bash
-# Shell mode (banner + bash instead of auto-launching Claude)
-echo '{"auto_launch_claude": false}' > /tmp/test-data/options.json
-
-# Auto-launch mode (default)
-echo '{"auto_launch_claude": true}' > /tmp/test-data/options.json
-# OR
-rm /tmp/test-data/options.json
-```
+Add-on options cannot be set in a plain container (see step 2 above); the
+container always starts in shell mode. To test auto-launch or any other
+option, deploy to a real Home Assistant with `scripts/dev-deploy.sh`.
 
 #### Authentication Testing
 
@@ -307,7 +304,6 @@ base-image security fix), run `release.yml` manually from the Actions tab.
 ```bash
 # Test with real Home Assistant config structure
 mkdir -p /tmp/ha-config/.storage /tmp/ha-data
-echo '{"auto_launch_claude": false}' > /tmp/ha-data/options.json
 
 podman run -d --name test-ha-claude -p 7681:7681 \
   -v /tmp/ha-config:/config -v /tmp/ha-data:/data local/claude-terminal:test

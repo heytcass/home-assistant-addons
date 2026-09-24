@@ -88,7 +88,7 @@ podman exec test-claude-dev chmod +x /opt/scripts/welcome.sh
 podman stop test-claude-dev && podman rm test-claude-dev
 ```
 
-Note: `bashio::config` reads `/data/options.json`; outside a real Supervisor environment bashio calls may fall back to defaults.
+Note: `bashio::config` in the current base image fetches options from the Supervisor API, not `/data/options.json`. Outside a real Supervisor every read logs a bashio `ERROR: Failed to get addon config from Supervisor API` and returns empty, so run.sh's own defaults apply (shell mode, no auto-update) regardless of options.json. To exercise options for real, use `scripts/dev-deploy.sh` on an HA box.
 
 ### Production Testing
 - **Local Testing**: Use `run-addon` to test on localhost:7681
@@ -100,7 +100,7 @@ Note: `bashio::config` reads `/data/options.json`; outside a real Supervisor env
 - **Indentation**: 2 spaces for YAML, 4 spaces for shell scripts
 - **Error Handling**: Use `bashio::log.error` for error reporting; never let a non-essential step kill startup
 - **Permissions**: Credential files must have 600 permissions
-- **CI**: shellcheck (warning severity), hadolint (error threshold), and a boot smoke test (run.sh must bring ttyd up within 60s with no Supervisor present and log no ERROR) run on PRs; keep all clean
+- **CI**: shellcheck (warning severity), hadolint (error threshold), and a boot smoke test (run.sh must bring ttyd up within 60s with no Supervisor present and log no ERROR beyond bashio's own Supervisor-API ones) run on PRs; keep all clean
 - **Releasing**: test on a real HA box first (`scripts/dev-deploy.sh`), then bump `version` in config.yaml plus a CHANGELOG entry in one commit on main, tag it `v<version>`, push the tag. See DEVELOPMENT.md → Releasing
 
 ### Key Environment Variables (set by run.sh / Dockerfile)
