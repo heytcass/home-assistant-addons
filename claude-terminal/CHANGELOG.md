@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.6.0
+
+### ✨ `enable_remote_control` — drive the session from your phone
+Launches Claude with `--remote-control`, so the terminal session also shows
+up as "Home Assistant" in the Claude mobile app and at claude.ai/code. It is
+the same session: type in the browser terminal or on your phone, both see
+the same conversation. No picker, no second process — the flag is appended
+to the existing tmux session command, and reconnects work as before.
+
+This deliberately uses the interactive flag rather than `claude remote-control`
+server mode, which is headless and exits after a few minutes offline.
+
+Remote Control needs a full claude.ai login (Pro/Max/Team/Enterprise). A
+`claude_code_oauth_token` or API key cannot establish it; the add-on log warns
+when the two options are combined. Combined with `dangerously_skip_permissions`,
+any device signed in to the account can drive an unprompted root shell with
+write access to `/config` — the log warns about that too.
+
 ## 2.5.5
 
 ### ✨ `working_directory` — start the session somewhere other than `/config`
