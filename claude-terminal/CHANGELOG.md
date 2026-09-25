@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.6.1
+
+### 🐛 Drag-to-copy now sends the selection to the browser
+Selecting text with the mouse copied it into tmux's internal buffer only;
+`Cmd/Ctrl+V` elsewhere pasted whatever was on the clipboard before. The
+drag-copy binding now writes the selection out explicitly (tmux's `-w`),
+which sends it to the browser as OSC 52. Existing installs pick up the new
+tmux config on restart.
+
+This is half the fix. In the reporter's testing Chrome still ignored the
+OSC 52 it received until a browser-side handler was added, so drag-copy may
+not work end to end in every browser yet. That half is tracked in #125.
+
+Reported with a detailed diagnosis by
+[@kirkande1](https://github.com/kirkande1) (#125).
+
 ## 2.6.0
 
 ### ✨ `enable_remote_control` — drive the session from your phone
