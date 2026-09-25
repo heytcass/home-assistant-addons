@@ -9,9 +9,10 @@ drag-copy binding now writes the selection out explicitly (tmux's `-w`),
 which sends it to the browser as OSC 52. Existing installs pick up the new
 tmux config on restart.
 
-This is half the fix. In the reporter's testing Chrome still ignored the
-OSC 52 it received until a browser-side handler was added, so drag-copy may
-not work end to end in every browser yet. That half is tracked in #125.
+**On its own this does not fix copying.** The browser terminal (ttyd 1.7.7)
+has no OSC 52 handler and drops the sequence in every browser, so a plain
+drag still only copies into tmux. Use **Shift+drag** to copy to your
+clipboard. The browser-side half is tracked in #125.
 
 Reported with a detailed diagnosis by
 [@kirkande1](https://github.com/kirkande1) (#125).
