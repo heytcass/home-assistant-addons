@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.6.2
+
+### 📋 Copying: Shift+drag, and the terminal now says so
+2.6.1 did not make mouse copy work: the browser terminal (ttyd 1.7.7) has
+no OSC 52 handler, so text selected with a plain drag never leaves tmux, in
+any browser. What does work is **Shift+drag**: it bypasses tmux and uses
+the browser terminal's own selection, which is copied to your clipboard on
+release (a ✂ flashes). On macOS, try Option if Shift doesn't select.
+
+A plain drag now shows a short message pointing at Shift+drag rather than
+silently copying into tmux only. DOCS.md and the README no longer claim
+plain drag copies, and the shell-mode welcome banner has a one-line
+copy/paste hint. Making plain drag reach the clipboard needs a browser-side
+fix, tracked in #125.
+
 ## 2.6.1
 
 ### 🐛 Drag-to-copy now sends the selection to the browser
