@@ -1,46 +1,83 @@
 name: Release
 
-# Releasing is a deliberate act: pushing a v<version> tag. Merging to main
-# ships nothing — the Supervisor pulls the GHCR image tagged with the
-# version in config.yaml, and that tag is only ever built here. (Publishing
-# on every push to main used to silently overwrite the image fresh installs
-# pull, with whatever happened to be on main.)
+# Releasing is a deliberate act: merging a release commit to main that bumps
+# `version:` in config.yaml (plus its CHANGELOG entry). Other merges ship
+# nothing: the Supervisor pulls the GHCR image tagged with the version in
+# config.yaml, and that tag is only ever built here. (Publishing on every
+# push to main used to silently overwrite the image fresh installs pull,
+# with whatever happened to be on main.)
 #
-# Order matters: images first, GitHub release second, so a release never
-# announces a version the Supervisor cannot pull. workflow_dispatch rebuilds
-# the images for the version currently in config.yaml without creating a
-# release (e.g. after a base-image security fix).
+# A push to main that touches config.yaml releases only when v<version>
+# does not exist yet, so option/schema edits that leave the version alone
+# are no-ops. The workflow creates the tag itself, after the images are up;
+# tags created with GITHUB_TOKEN do not trigger workflows, so there is no
+# second run. Pushing a v<version> tag by hand still works (it must match
+# config.yaml).
+#
+# Order matters: images first, GitHub release (and tag) second, so a release
+# never announces a version the Supervisor cannot pull. workflow_dispatch
+# rebuilds the images for the version currently in config.yaml without
+# creating a release (e.g. after a base-image security fix).
 
 on:
   push:
+    branches:
+      - main
+    # Not evaluated for tag pushes, which always run.
+    paths:
+      - claude-terminal/config.yaml
     tags:
       - "v*"
   workflow_dispatch:
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
-  validate:
-    name: Validate tag
-    if: github.event_name == 'push'
+  version:
+    name: Resolve version
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+      release: ${{ steps.resolve.outputs.release }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Tag must match config.yaml
+      - name: Decide whether this run releases
+        id: resolve
         run: |
-          config_version=$(grep '^version:' claude-terminal/config.yaml | sed 's/version: *"\?\([^"]*\)"\?/\1/')
-          tag_version="${GITHUB_REF_NAME#v}"
-          if [ "$config_version" != "$tag_version" ]; then
-            echo "::error::Tag version ($tag_version) does not match config.yaml version ($config_version)"
-            exit 1
-          fi
-          echo "Version $tag_version validated"
+          version=$(grep '^version:' claude-terminal/config.yaml | sed 's/version: *"\?\([^"]*\)"\?/\1/')
+          case "${GITHUB_EVENT_NAME}:${GITHUB_REF_TYPE}" in
+            push:tag)
+              tag_version="${GITHUB_REF_NAME#v}"
+              if [ "$version" != "$tag_version" ]; then
+                echo "::error::Tag version ($tag_version) does not match config.yaml version ($version)"
+                exit 1
+              fi
+              release=true
+              ;;
+            push:branch)
+              if git ls-remote --exit-code --tags origin "refs/tags/v${version}" >/dev/null; then
+                echo "::notice::v${version} is already released; config.yaml changed without a version bump"
+                release=false
+              else
+                release=true
+              fi
+              ;;
+            *)
+              release=false
+              ;;
+          esac
+          echo "Version ${version}, release=${release}"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "release=${release}" >> "$GITHUB_OUTPUT"
 
   publish:
     name: Publish (${{ matrix.arch }})
-    # `always()` lets the job run on workflow_dispatch, where validate is
-    # skipped; the result check still blocks a mismatched tag.
-    if: always() && (needs.validate.result == 'success' || needs.validate.result == 'skipped')
-    needs: validate
+    # workflow_dispatch rebuilds images without releasing
+    if: needs.version.outputs.release == 'true' || github.event_name == 'workflow_dispatch'
+    needs: version
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -73,21 +110,17 @@ jobs:
 
   release:
     name: Create GitHub Release
-    if: github.event_name == 'push'
-    needs: publish
+    if: needs.version.outputs.release == 'true'
+    needs: [version, publish]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
 
-      - name: Extract version from tag
-        id: version
-        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-
       - name: Extract changelog for this version
         run: |
-          version="${{ steps.version.outputs.version }}"
+          version="${{ needs.version.outputs.version }}"
           # Extract content between this version's header and the next ## header
           awk -v ver="$version" \
             'BEGIN{found=0} /^## /{if(found)exit; if($2==ver)found=1; next} found{print}' \
@@ -102,6 +135,9 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: "v${{ steps.version.outputs.version }}"
+          # Creates the tag on this commit when a main push released
+          tag_name: "v${{ needs.version.outputs.version }}"
+          target_commitish: ${{ github.sha }}
+          name: "v${{ needs.version.outputs.version }}"
           body_path: /tmp/changelog.md
           generate_release_notes: false
