@@ -45,7 +45,7 @@ curl -X GET http://localhost:7681/
 ### Add-on Structure (claude-terminal/)
 - **config.yaml** - Home Assistant add-on configuration (options schema, ingress, volume maps)
 - **Dockerfile** - Alpine-based image; all runtime packages (ttyd, tmux, nodejs, uv, ...) are baked in so startup never depends on the network
-- **build.yaml** - Multi-architecture build configuration (amd64, aarch64); images are prebuilt on GHCR and pulled by the Supervisor. **Images are built only when a `v<version>` tag is pushed** (release.yml) — merging to main ships nothing to users
+- **build.yaml** - Multi-architecture build configuration (amd64, aarch64); images are prebuilt on GHCR and pulled by the Supervisor. **Images are built only when a merge to main bumps `version` in config.yaml** (release.yml tags `v<version>` and publishes) — any other merge ships nothing to users
 - **run.sh** - Startup script: environment/persistence setup, background Claude auto-update, ttyd launch
 - **scripts/** - Support scripts copied to `/opt/scripts/` (welcome banner, health check, HA context, MCP setup, persist-install, tmux config)
 
@@ -101,7 +101,7 @@ Note: `bashio::config` in the current base image fetches options from the Superv
 - **Error Handling**: Use `bashio::log.error` for error reporting; never let a non-essential step kill startup
 - **Permissions**: Credential files must have 600 permissions
 - **CI**: shellcheck (warning severity), hadolint (error threshold), and a boot smoke test (run.sh must bring ttyd up within 60s with no Supervisor present and log no ERROR beyond bashio's own Supervisor-API ones) run on PRs; keep all clean
-- **Releasing**: test on a real HA box first (`scripts/dev-deploy.sh`), then bump `version` in config.yaml plus a CHANGELOG entry in one commit on main, tag it `v<version>`, push the tag. See DEVELOPMENT.md → Releasing
+- **Releasing**: test on a real HA box first (`scripts/dev-deploy.sh`), then merge one commit that bumps `version` in config.yaml plus a CHANGELOG entry; release.yml builds, tags `v<version>` and publishes. See DEVELOPMENT.md → Releasing
 
 ### Key Environment Variables (set by run.sh / Dockerfile)
 - `HOME=/data/home`

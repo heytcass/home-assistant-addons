@@ -271,28 +271,29 @@ registers as an update. Uninstall it from the store when you are done.
 
 ## Releasing
 
-Merging to `main` ships **nothing** to users. Home Assistant installs pull the
-GHCR image tagged with the `version:` in `config.yaml`, and that image is only
-built when a matching `v<version>` tag is pushed (`release.yml`). So PRs can
-land on `main` freely; a release is a separate, deliberate step:
+Merging to `main` ships **nothing** to users unless it bumps the version.
+Home Assistant installs pull the GHCR image tagged with the `version:` in
+`config.yaml`, and `release.yml` only builds one when that version has no
+`v<version>` tag yet. So PRs can land on `main` freely; a release is a
+separate, deliberate step: merge a release commit.
 
 ```bash
-# 1. Release commit on main: version bump + CHANGELOG entry, nothing else
+# Release commit (usually its own PR): version bump + CHANGELOG entry, nothing else
 vim claude-terminal/config.yaml     # version: "x.y.z"
 vim claude-terminal/CHANGELOG.md    # ## x.y.z section at the top
 git commit -am "chore(claude-terminal): release x.y.z"
-git push origin main
-
-# 2. Tag it — this is what builds and publishes
-git tag vx.y.z
-git push origin vx.y.z
+# push / open the PR, merge it to main — that is the release
 ```
 
-`release.yml` refuses a tag that does not match `config.yaml`, builds and
-pushes both architecture images, and only then creates the GitHub release
-with the matching `CHANGELOG.md` section as its body. Users see the update
-in the add-on store once the Supervisor next refreshes the repository
-(within the hour, or immediately via *Check for updates*).
+On that push to `main`, `release.yml` sees that `vx.y.z` does not exist,
+builds and pushes both architecture images, and only then tags the commit
+`vx.y.z` and creates the GitHub release with the matching `CHANGELOG.md`
+section as its body. A `config.yaml` change that leaves the version alone
+does nothing. Users see the update in the add-on store once the Supervisor
+next refreshes the repository (within the hour, or immediately via *Check
+for updates*).
+
+Pushing a `vx.y.z` tag by hand still works; it must match `config.yaml`.
 
 To rebuild the images for the current version without a new release (e.g. a
 base-image security fix), run `release.yml` manually from the Actions tab.
