@@ -6,6 +6,7 @@ on:
     paths:
       - "claude-terminal/**/*.sh"
       - "claude-terminal/run.sh"
+      - "scripts/**"
       - ".github/workflows/shellcheck.yml"
 
 jobs:
@@ -26,3 +27,11 @@ jobs:
           ignore_names: tmux.conf
         env:
           SHELLCHECK_OPTS: "-s bash -e SC1008 -e SC1091"
+
+      - name: Run ShellCheck (repo scripts)
+        uses: ludeeus/action-shellcheck@2.0.0
+        with:
+          scandir: scripts
+          severity: warning
+        env:
+          SHELLCHECK_OPTS: "-s bash"

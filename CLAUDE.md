@@ -22,6 +22,7 @@ direnv allow
 - `run-addon` - Run add-on locally on port 7681 with volume mapping
 - `lint-dockerfile` - Lint Dockerfile using hadolint
 - `test-endpoint` - Test web endpoint availability (curl localhost:7681)
+- `scripts/dev-deploy.sh [user@ha-host]` - Install the working tree on a real HA box as a separate "Claude Terminal (dev)" local add-on (see DEVELOPMENT.md)
 
 ### Manual Commands (without aliases)
 ```bash
@@ -44,7 +45,7 @@ curl -X GET http://localhost:7681/
 ### Add-on Structure (claude-terminal/)
 - **config.yaml** - Home Assistant add-on configuration (options schema, ingress, volume maps)
 - **Dockerfile** - Alpine-based image; all runtime packages (ttyd, tmux, nodejs, uv, ...) are baked in so startup never depends on the network
-- **build.yaml** - Multi-architecture build configuration (amd64, aarch64); images are prebuilt on GHCR and pulled by the Supervisor
+- **build.yaml** - Multi-architecture build configuration (amd64, aarch64); images are prebuilt on GHCR and pulled by the Supervisor. **Images are built only when a `v<version>` tag is pushed** (release.yml) — merging to main ships nothing to users
 - **run.sh** - Startup script: environment/persistence setup, background Claude auto-update, ttyd launch
 - **scripts/** - Support scripts copied to `/opt/scripts/` (welcome banner, health check, HA context, MCP setup, persist-install, tmux config)
 
@@ -87,7 +88,7 @@ podman exec test-claude-dev chmod +x /opt/scripts/welcome.sh
 podman stop test-claude-dev && podman rm test-claude-dev
 ```
 
-Note: `bashio::config` reads `/data/options.json`; outside a real Supervisor environment bashio calls may fall back to defaults.
+Note: `bashio::config` in the current base image fetches options from the Supervisor API, not `/data/options.json`. Outside a real Supervisor every read logs a bashio `ERROR: Failed to get addon config from Supervisor API` and returns empty, so run.sh's own defaults apply (shell mode, no auto-update) regardless of options.json. To exercise options for real, use `scripts/dev-deploy.sh` on an HA box.
 
 ### Production Testing
 - **Local Testing**: Use `run-addon` to test on localhost:7681
@@ -99,7 +100,8 @@ Note: `bashio::config` reads `/data/options.json`; outside a real Supervisor env
 - **Indentation**: 2 spaces for YAML, 4 spaces for shell scripts
 - **Error Handling**: Use `bashio::log.error` for error reporting; never let a non-essential step kill startup
 - **Permissions**: Credential files must have 600 permissions
-- **CI**: shellcheck (warning severity) and hadolint (error threshold) run on PRs; keep both clean
+- **CI**: shellcheck (warning severity), hadolint (error threshold), and a boot smoke test (run.sh must bring ttyd up within 60s with no Supervisor present and log no ERROR beyond bashio's own Supervisor-API ones) run on PRs; keep all clean
+- **Releasing**: test on a real HA box first (`scripts/dev-deploy.sh`), then bump `version` in config.yaml plus a CHANGELOG entry in one commit on main, tag it `v<version>`, push the tag. See DEVELOPMENT.md → Releasing
 
 ### Key Environment Variables (set by run.sh / Dockerfile)
 - `HOME=/data/home`
