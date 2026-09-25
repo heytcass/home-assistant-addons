@@ -1,7 +1,7 @@
 ---
 name: "Claude Terminal"
 description: "Web terminal with Anthropic's Claude Code CLI and persistent auth"
-version: "2.5.5"
+version: "2.6.0"
 slug: "claude_terminal"
 init: false
 
@@ -38,6 +38,7 @@ options:
   working_directory: ""
   claude_code_oauth_token: ""
   dangerously_skip_permissions: false
+  enable_remote_control: false
   claude_extra_args: ""
   ha_smart_context: true
   enable_ha_mcp: true
@@ -50,6 +51,7 @@ schema:
   working_directory: str?
   claude_code_oauth_token: password?
   dangerously_skip_permissions: bool?
+  enable_remote_control: bool?
   claude_extra_args: str?
   ha_smart_context: bool?
   enable_ha_mcp: bool?

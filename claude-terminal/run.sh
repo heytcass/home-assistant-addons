@@ -363,6 +363,17 @@ build_claude_flags() {
         flags="--dangerously-skip-permissions"
     fi
 
+    # Remote Control: the *interactive* flag, not `claude remote-control`
+    # server mode. The session stays typeable in the browser and also shows
+    # up in the Claude app / claude.ai/code, where it can be driven from a
+    # phone. Server mode would be a second, headless claude process that
+    # exits after ~10 minutes offline — as the tmux session command that
+    # would take the terminal down with it. The session name is fixed:
+    # the default is the container hostname, an opaque hex slug.
+    if [ "$(bashio::config 'enable_remote_control' 'false')" = "true" ]; then
+        flags="${flags:+$flags }--remote-control 'Home Assistant'"
+    fi
+
     local extra
     extra=$(bashio::config 'claude_extra_args' '')
     if [ -n "$extra" ] && [ "$extra" != "null" ]; then
@@ -418,6 +429,29 @@ get_session_command() {
     fi
 }
 
+# Remote Control needs a full claude.ai login and a claude launch to attach
+# to; say so at boot rather than leaving the user to find out in the
+# terminal. Nothing here is fatal — Claude reports the actual failure.
+warn_remote_control() {
+    local flags="$1"
+    [[ "$flags" == *"--remote-control"* ]] || return 0
+
+    if [ "$(bashio::config 'auto_launch_claude' 'true')" != "true" ]; then
+        bashio::log.warning "enable_remote_control has no effect in shell mode (auto_launch_claude=false); run 'claude --remote-control' yourself"
+        return 0
+    fi
+
+    bashio::log.info "Remote Control enabled: the session appears as 'Home Assistant' in the Claude app and claude.ai/code"
+
+    if bashio::config.has_value 'claude_code_oauth_token'; then
+        bashio::log.warning "Remote Control requires a full claude.ai login; the claude_code_oauth_token from 'claude setup-token' cannot establish it. Claude will report this when it starts."
+    fi
+
+    if [[ "$flags" == *"--dangerously-skip-permissions"* ]]; then
+        bashio::log.warning "dangerously_skip_permissions + Remote Control: any device signed in to this Claude account can drive an unprompted root shell with write access to /config."
+    fi
+}
+
 # Start main web terminal
 start_web_terminal() {
     local port=7681
@@ -432,6 +466,8 @@ start_web_terminal() {
         bashio::log.warning "Assistant through the Supervisor API and MCP."
         bashio::log.warning "=========================================================="
     fi
+
+    warn_remote_control "$flags"
 
     local session_command workdir
     session_command=$(get_session_command "$flags")
