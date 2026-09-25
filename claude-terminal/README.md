@@ -19,7 +19,7 @@ This add-on runs Anthropic's [Claude Code](https://docs.anthropic.com/en/docs/cl
 
 - **Just Claude Code**: opens straight into Claude — no menus in the way
 - **Stays current**: the official native Claude Code build is installed into persistent storage and auto-updated in the background
-- **Session persistence**: tmux keeps your conversation alive across browser reloads and HA navigation; scrollback and mouse copy work
+- **Session persistence**: tmux keeps your conversation alive across browser reloads and HA navigation; scrollback works, and Shift+drag copies to your clipboard
 - **Persistent auth**: log in once via OAuth; credentials survive restarts and updates
 - **Home Assistant MCP**: bundled [ha-mcp](https://github.com/homeassistant-ai/ha-mcp) server for natural-language control of your instance
 - **HA Smart Context**: Claude automatically knows your HA version, entities, and add-ons

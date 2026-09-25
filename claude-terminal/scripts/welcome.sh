@@ -19,6 +19,8 @@ echo -e "  ${WHITE}claude-doctor${NC}     diagnose network, auth, and environmen
 echo -e "  ${WHITE}persist-install${NC}   install apk/pip packages that survive restarts"
 echo -e "  ${WHITE}ha-context${NC}        refresh the Home Assistant context file for Claude"
 echo ""
+echo -e "  ${DIM}Copy: hold Shift and drag · Paste: Ctrl+Shift+V${NC}"
+echo ""
 
 if [ "$1" = "--shell" ]; then
     exec bash
