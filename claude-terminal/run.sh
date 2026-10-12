@@ -452,6 +452,24 @@ warn_remote_control() {
     fi
 }
 
+# Start the tmux session at boot instead of on the first browser visit.
+# ttyd only spawns its command when a client connects, so after every
+# add-on restart Claude — and with it Remote Control — stayed down until
+# someone opened the sidebar panel. Starting the same session detached here
+# means ttyd's `new-session -A` simply attaches to it. If claude exits
+# before anyone connects, the session is gone and ttyd recreates it on the
+# next visit exactly as before. TERM matches what ttyd advertises: tmux.conf
+# copies $TERM into default-terminal, and run.sh has none of its own.
+start_session_now() {
+    local workdir=$1 session_command=$2
+    [ "$(bashio::config 'auto_launch_claude' 'true')" = "true" ] || return 0
+    if TERM=xterm-256color tmux new-session -d -s claude -x 200 -y 50 -c "$workdir" "$session_command"; then
+        bashio::log.info "Claude started in the background; the web terminal attaches to it"
+    else
+        bashio::log.warning "Could not pre-start the tmux session; it will start on the first terminal visit"
+    fi
+}
+
 # Start main web terminal
 start_web_terminal() {
     local port=7681
@@ -477,6 +495,8 @@ start_web_terminal() {
 
     # Terminal theme - dark palette with terracotta accents (#d97757)
     local ttyd_theme='{"background":"#1a1b26","foreground":"#c0caf5","cursor":"#d97757","cursorAccent":"#1a1b26","selectionBackground":"#33467c","selectionForeground":"#c0caf5","black":"#15161e","red":"#f7768e","green":"#9ece6a","yellow":"#e0af68","blue":"#7aa2f7","magenta":"#bb9af7","cyan":"#7dcfff","white":"#a9b1d6","brightBlack":"#414868","brightRed":"#f7768e","brightGreen":"#9ece6a","brightYellow":"#e0af68","brightBlue":"#7aa2f7","brightMagenta":"#bb9af7","brightCyan":"#7dcfff","brightWhite":"#c0caf5"}'
+
+    start_session_now "$workdir" "$session_command"
 
     # Run ttyd with keepalive configuration to prevent WebSocket disconnects
     # See: https://github.com/heytcass/home-assistant-addons/issues/24
