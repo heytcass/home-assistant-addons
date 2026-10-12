@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### 🚀 Claude starts with the add-on, not on the first visit
+The terminal (ttyd) only started its tmux session when a browser opened
+the panel, so after every add-on restart, update or host reboot Claude —
+and **Remote Control** with it — stayed offline until someone clicked the
+sidebar entry. The session now starts in the background at boot and the
+web terminal attaches to it, so a Remote Control session is reachable from
+the Claude app again right after a restart. Shell mode
+(`auto_launch_claude: false`) is unchanged.
+
 ## 2.6.2
 
 ### 📋 Copying: Shift+drag, and the terminal now says so
