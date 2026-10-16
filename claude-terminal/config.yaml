@@ -61,6 +61,14 @@ schema:
   persistent_pip_packages:
     - str
 
+# Keep regenerable data out of HA backups. The uv cache is rebuilt by uvx
+# on the next ha-mcp start; a missing CLI binary after a restore makes
+# ensure_native_claude_usable fall back to the bundled copy while
+# update_claude reinstalls the native build in the background.
+backup_exclude:
+  - ".cache/*"
+  - ".local/share/claude/versions/*"
+
 # Volume mappings for file access
 map:
   - config:rw            # Home Assistant configuration files
