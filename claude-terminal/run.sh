@@ -53,6 +53,14 @@ init_environment() {
     # binaries accumulate in versions/. XDG_DATA_HOME is exported above.
     prune_claude_versions
 
+    # uv's cache (ha-mcp and its dependencies, fetched by uvx) only ever
+    # grows: every ha-mcp version leaves its unpacked archives behind
+    # (435 MB observed, 154 MB after a prune). Prune here, at boot, because a running ha-mcp is
+    # executed straight out of archive-v0 and holds the cache lock — pruning
+    # later would block or break the live MCP server. Nothing has started
+    # it yet at this point; setup_ha_mcp re-warms the current version.
+    prune_uv_cache
+
     # Migrate any existing authentication files from legacy locations
     migrate_legacy_auth_files "$claude_config_dir"
 
@@ -135,6 +143,28 @@ prune_claude_versions() {
     if [ "$pruned" -gt 0 ]; then
         bashio::log.info "Pruned $pruned old Claude Code version(s) from persistent storage"
     fi
+}
+
+# Drop uv cache entries no environment refers to any more. Local-only (no
+# network) and bounded by a timeout so it can never hold up the boot path.
+prune_uv_cache() {
+    command -v uv >/dev/null 2>&1 || return 0
+    [ -d "$XDG_CACHE_HOME/uv" ] || return 0
+    if ! timeout 60 uv cache prune >/dev/null 2>&1; then
+        bashio::log.warning "Could not prune the uv cache; continuing"
+    fi
+}
+
+# prune_claude_versions only runs at boot and after the boot-time update,
+# but the CLI also self-updates during long-running sessions. An add-on
+# that stays up for weeks would otherwise keep every in-session update in
+# versions/ (and in every backup) until its next restart.
+start_version_pruner() {
+    (
+        while sleep 21600; do
+            prune_claude_versions || true
+        done
+    ) &
 }
 
 # Install user-facing commands into /usr/local/bin
@@ -517,6 +547,7 @@ main() {
     export_oauth_token
     setup_commands
     update_claude
+    start_version_pruner
     install_persistent_packages
     generate_ha_context
     start_login_url_watcher
