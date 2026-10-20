@@ -33,7 +33,7 @@ This add-on runs Anthropic's [Claude Code](https://docs.anthropic.com/en/docs/cl
 2. Install the Claude Terminal add-on
 3. Start the add-on
 4. Click "OPEN WEB UI" or the sidebar icon
-5. On first use, follow the OAuth prompts to log in to your Anthropic account
+5. On first use, log in with the clickable link from the **"Claude Code login"** Home Assistant notification
 
 ## Configuration
 
