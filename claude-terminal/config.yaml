@@ -25,11 +25,13 @@ panel_icon: mdi:code-braces
 panel_title: "Claude Terminal"
 panel_admin: true
 
-# Port configuration
+# Port configuration. Unset by default: ingress reaches the terminal through
+# nginx, which admits only the Supervisor (172.30.32.2). Publishing 7681 opens
+# the gate to every client — see start_ingress_proxy in run.sh (#146).
 ports:
   7681/tcp: null
 ports_description:
-  7681/tcp: "Direct web terminal access. Not needed for ingress, and NOT password-protected: anyone who can reach this port gets a root shell in the container, with no Home Assistant login. Leave unset unless the port is firewalled."
+  7681/tcp: "Direct web terminal access. Not needed for ingress, and NOT password-protected: anyone who can reach this port (and any other add-on) gets a root shell in the container, with no Home Assistant login. Leave unset unless the port is firewalled."
 
 # Add-on configuration options
 options:

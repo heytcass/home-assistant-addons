@@ -9,6 +9,7 @@ RUN apk add --no-cache \
     git \
     jq \
     nano \
+    nginx \
     nodejs \
     npm \
     py3-aiohttp \

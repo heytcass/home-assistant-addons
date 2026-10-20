@@ -452,9 +452,45 @@ warn_remote_control() {
     fi
 }
 
+# Put nginx in front of ttyd so only the Supervisor's ingress proxy (and
+# loopback) can reach the terminal — see scripts/nginx.conf for why (#146).
+# Two deliberate exceptions open it to any client:
+#  - the user published 7681/tcp on the host: the documented, logged
+#    trade-off of direct access (the terminal behind it has no login);
+#  - there is no Supervisor at all (no SUPERVISOR_TOKEN): local podman runs
+#    and the CI boot test. A real add-on always has the token.
+# If the port lookup itself fails, the gate stays closed (ingress only).
+start_ingress_proxy() {
+    local open_gate=/run/claude-terminal/allow-any-client.conf
+    rm -f "$open_gate"
+
+    local allow_all=false host_port=""
+    if [ -z "${SUPERVISOR_TOKEN:-}" ]; then
+        allow_all=true
+        bashio::log.info "No Supervisor: web terminal reachable from any address (local test run)"
+    else
+        # Only a numeric host port opens the gate; an API error, null or
+        # anything unexpected leaves it closed.
+        host_port=$(bashio::addon.port 7681/tcp 2>/dev/null) || host_port=""
+        if [[ "$host_port" =~ ^[0-9]+$ ]]; then
+            allow_all=true
+            bashio::log.warning "Port 7681 is published on the host (${host_port}): anyone who can reach it gets a root shell with no login (see DOCS.md)"
+        fi
+    fi
+
+    if [ "$allow_all" = true ]; then
+        mkdir -p "$(dirname "$open_gate")"
+        echo 'allow all;' > "$open_gate"
+    fi
+
+    nginx -c /opt/scripts/nginx.conf \
+        || bashio::exit.nok "nginx failed to start; the web terminal would be unreachable"
+}
+
 # Start main web terminal
 start_web_terminal() {
-    local port=7681
+    # Loopback only: nginx (start_ingress_proxy) owns the add-on's port 7681
+    local port=7682
     local flags
     flags=$(build_claude_flags)
 
@@ -473,7 +509,7 @@ start_web_terminal() {
     session_command=$(get_session_command "$flags")
     workdir=$(get_working_directory)
 
-    bashio::log.info "Starting web terminal on port ${port} (auto_launch_claude=$(bashio::config 'auto_launch_claude' 'true'))"
+    bashio::log.info "Starting web terminal on loopback port ${port}, served on 7681 via nginx (auto_launch_claude=$(bashio::config 'auto_launch_claude' 'true'))"
 
     # Terminal theme - dark palette with terracotta accents (#d97757)
     local ttyd_theme='{"background":"#1a1b26","foreground":"#c0caf5","cursor":"#d97757","cursorAccent":"#1a1b26","selectionBackground":"#33467c","selectionForeground":"#c0caf5","black":"#15161e","red":"#f7768e","green":"#9ece6a","yellow":"#e0af68","blue":"#7aa2f7","magenta":"#bb9af7","cyan":"#7dcfff","white":"#a9b1d6","brightBlack":"#414868","brightRed":"#f7768e","brightGreen":"#9ece6a","brightYellow":"#e0af68","brightBlue":"#7aa2f7","brightMagenta":"#bb9af7","brightCyan":"#7dcfff","brightWhite":"#c0caf5"}'
@@ -486,7 +522,7 @@ start_web_terminal() {
     # and HA navigation instead of stacking new ones.
     exec ttyd \
         --port "${port}" \
-        --interface 0.0.0.0 \
+        --interface lo \
         --writable \
         --ping-interval 30 \
         --client-option enableReconnect=true \
@@ -521,6 +557,7 @@ main() {
     generate_ha_context
     start_login_url_watcher
     setup_ha_mcp
+    start_ingress_proxy
     start_web_terminal
 }
 
