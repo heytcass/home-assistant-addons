@@ -60,8 +60,14 @@ ha-context      # refresh the Home Assistant context file
 
 The terminal starts in `/config` (your Home Assistant configuration). Also mounted:
 
+- `/addons` — local add-ons, for developing your own
 - `/addon_configs` — configuration directories of your other add-ons
 - `/share` — the shared folder
+- `/media` — the media folder
+- `/backup` — backup archives
+- `/ssl` — TLS certificates and private keys
+
+This is the same set of folders the Studio Code Server add-on mounts.
 
 ## Home Assistant MCP Integration
 
@@ -73,11 +79,11 @@ Disable it with `enable_ha_mcp: false` if you don't want Claude to have this acc
 
 ## Security notes
 
-**This add-on gives Claude a lot of power by design**: it runs as root in its container, has read/write access to `/config`, `/addon_configs`, and `/share`, and (with MCP enabled) can control devices and modify automations.
+**This add-on gives Claude a lot of power by design**: it runs as root in its container, has read/write access to `/config`, `/addons`, `/addon_configs`, `/share`, `/media`, `/backup` and `/ssl`, and (with MCP enabled) can control devices and modify automations.
 
 **`dangerously_skip_permissions` removes the last human checkpoint.** With it enabled, a misunderstanding — or a prompt injection in any file or web page Claude reads — can modify your HA configuration or actuate devices without asking you first. Leave it off unless you understand and accept that trade-off. A warning banner is printed in the add-on log whenever it is active.
 
-**Any Home Assistant user can reach the terminal, not just administrators.** `panel_admin: true` hides the sidebar entry from non-admins, but it does not restrict the ingress URL behind it — that is how ingress works in Home Assistant generally, not something this add-on can switch off. Core's ingress view is declared `requires_auth = False` and is gated only by an ingress session cookie, and Core deliberately allows any signed-in user to mint that cookie and to read an add-on's `ingress_url` (see [core#60120](https://github.com/home-assistant/core/pull/60120)). For most add-ons that is harmless; here it means a non-admin account is one URL away from a root shell in this container — which can write anywhere in `/config`, `/addon_configs` and `/share`, and drive the Supervisor API. Treat every account on your instance as trusted while this add-on is installed, and stop or uninstall it if you hand out limited accounts.
+**Any Home Assistant user can reach the terminal, not just administrators.** `panel_admin: true` hides the sidebar entry from non-admins, but it does not restrict the ingress URL behind it — that is how ingress works in Home Assistant generally, not something this add-on can switch off. Core's ingress view is declared `requires_auth = False` and is gated only by an ingress session cookie, and Core deliberately allows any signed-in user to mint that cookie and to read an add-on's `ingress_url` (see [core#60120](https://github.com/home-assistant/core/pull/60120)). For most add-ons that is harmless; here it means a non-admin account is one URL away from a root shell in this container — which can write anywhere in the folders listed above (including backups and TLS private keys), and drive the Supervisor API. Treat every account on your instance as trusted while this add-on is installed, and stop or uninstall it if you hand out limited accounts.
 
 **Publishing port 7681 exposes an unauthenticated root shell.** The port is closed by default and ingress does not need it. If you map it to your host anyway, note that the terminal behind it has no login of its own — anyone who can reach that port on your network gets the same shell, with no Home Assistant account involved at all. Leave it unset unless the port is firewalled off and you accept that.
 

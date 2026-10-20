@@ -61,11 +61,24 @@ schema:
   persistent_pip_packages:
     - str
 
-# Volume mappings for file access
+# Volume mappings for file access: the same set the Studio Code Server
+# add-on mounts, so anything you can edit there you can do here too
 map:
-  - config:rw            # Home Assistant configuration files
-  - all_addon_configs:rw # Other add-ons' config directories (/addon_configs)
-  - share:rw             # Shared folder between add-ons and HA
+  - type: homeassistant_config # Home Assistant configuration files
+    read_only: false
+    path: /config
+  - type: addons               # Local add-ons (/addons), for add-on development
+    read_only: false
+  - type: all_addon_configs    # Other add-ons' config directories (/addon_configs)
+    read_only: false
+  - type: share                # Shared folder between add-ons and HA
+    read_only: false
+  - type: media                # Media folder (/media)
+    read_only: false
+  - type: backup               # Backup archives (/backup)
+    read_only: false
+  - type: ssl                  # TLS certificates and keys (/ssl)
+    read_only: false
 
 # API access for Home Assistant integration
 # hassio_api + role manager: /addons (HA Smart Context lists installed

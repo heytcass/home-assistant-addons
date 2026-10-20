@@ -23,7 +23,7 @@ This add-on runs Anthropic's [Claude Code](https://docs.anthropic.com/en/docs/cl
 - **Persistent auth**: log in once via OAuth; credentials survive restarts and updates
 - **Home Assistant MCP**: bundled [ha-mcp](https://github.com/homeassistant-ai/ha-mcp) server for natural-language control of your instance
 - **HA Smart Context**: Claude automatically knows your HA version, entities, and add-ons
-- **Broad file access**: `/config`, `/addon_configs`, and `/share` are mounted
+- **Broad file access**: `/config`, `/addons`, `/addon_configs`, `/share`, `/media`, `/backup` and `/ssl` are mounted, the same set as Studio Code Server
 - **Persistent packages**: `persist-install` keeps your extra apk/pip tools across restarts
 - **Multi-architecture**: amd64 and aarch64 (prebuilt images pulled from GHCR)
 
