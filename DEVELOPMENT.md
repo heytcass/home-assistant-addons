@@ -26,9 +26,11 @@ podman build --build-arg BUILD_FROM=ghcr.io/home-assistant/amd64-base:3.21 \
 #    To test options for real, use scripts/dev-deploy.sh (see below).
 mkdir -p /tmp/test-config /tmp/test-data
 
-# 3. Run test container
+# 3. Run test container. DEV_ALLOW_ANY_CLIENT=1 is required for local runs:
+#    the add-on's nginx otherwise only accepts the Supervisor's ingress proxy
+#    (172.30.32.2), so your browser would get a 403. Never needed on HA.
 podman run -d --name test-claude-dev \
-  -p 7681:7681 \
+  -e DEV_ALLOW_ANY_CLIENT=1 -p 7681:7681 \
   -v /tmp/test-config:/config \
   -v /tmp/test-data:/data \
   local/claude-terminal:test
@@ -58,7 +60,7 @@ podman build --build-arg BUILD_FROM=ghcr.io/home-assistant/amd64-base:3.21 \
 podman stop test-claude-dev && podman rm test-claude-dev
 
 # Start new container with changes
-podman run -d --name test-claude-dev -p 7681:7681 \
+podman run -d --name test-claude-dev -e DEV_ALLOW_ANY_CLIENT=1 -p 7681:7681 \
   -v /tmp/test-config:/config local/claude-terminal:test
 
 # Test changes
@@ -100,8 +102,8 @@ rm -rf /tmp/test-data/.config/claude /tmp/test-data/home/.claude
 
 ```bash
 # Run multiple containers on different ports
-podman run -d --name test-claude-dev-8681 -p 8681:7681 -v /tmp/test-config-2:/config local/claude-terminal:test
-podman run -d --name test-claude-dev-9681 -p 9681:7681 -v /tmp/test-config-3:/config local/claude-terminal:test
+podman run -d --name test-claude-dev-8681 -e DEV_ALLOW_ANY_CLIENT=1 -p 8681:7681 -v /tmp/test-config-2:/config local/claude-terminal:test
+podman run -d --name test-claude-dev-9681 -e DEV_ALLOW_ANY_CLIENT=1 -p 9681:7681 -v /tmp/test-config-3:/config local/claude-terminal:test
 ```
 
 ### Debugging Techniques
@@ -184,7 +186,7 @@ wait
 sudo lsof -ti:7681 | xargs kill -9
 
 # Or use different port
-podman run -d --name test-claude-dev -p 7682:7681 -v /tmp/test-config:/config local/claude-terminal:test
+podman run -d --name test-claude-dev -e DEV_ALLOW_ANY_CLIENT=1 -p 7682:7681 -v /tmp/test-config:/config local/claude-terminal:test
 ```
 
 #### Volume Mount Issues
@@ -306,7 +308,7 @@ base-image security fix), run `release.yml` manually from the Actions tab.
 # Test with real Home Assistant config structure
 mkdir -p /tmp/ha-config/.storage /tmp/ha-data
 
-podman run -d --name test-ha-claude -p 7681:7681 \
+podman run -d --name test-ha-claude -e DEV_ALLOW_ANY_CLIENT=1 -p 7681:7681 \
   -v /tmp/ha-config:/config -v /tmp/ha-data:/data local/claude-terminal:test
 ```
 

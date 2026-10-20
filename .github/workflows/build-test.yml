@@ -87,8 +87,10 @@ jobs:
         # from Supervisor API" ERROR and returns empty; run.sh's defaults then
         # apply (shell mode, no auto-update). Those bashio lines are filtered
         # out below; any other ERROR is ours. What this proves: nothing on the
-        # boot path blocks or dies without a Supervisor, and ttyd answers
-        # within 60s.
+        # boot path blocks or dies without a Supervisor, the terminal answers
+        # through nginx within 60s, and it is closed to everyone but the
+        # ingress proxy (#146): the runner is not 172.30.32.2, so it must get a
+        # 403 on 7681, and ttyd itself (7682, loopback) must not be reachable.
         run: |
           docker run -d --name boot-test -p 7681:7681 \
             -v "$(mktemp -d):/data" -v "$(mktemp -d):/config" \
@@ -96,10 +98,14 @@ jobs:
 
           ok=0
           for _ in $(seq 1 30); do
-            if curl -fsS -o /dev/null http://localhost:7681/; then ok=1; break; fi
+            if docker exec boot-test curl -fsS -o /dev/null http://127.0.0.1:7681/; then ok=1; break; fi
             if [ "$(docker inspect -f '{{.State.Running}}' boot-test)" != "true" ]; then break; fi
             sleep 2
           done
+
+          ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' boot-test)
+          outside=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://localhost:7681/ || true)
+          ttyd_direct=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://${ip}:7682/" || true)
 
           echo "--- add-on log ---"
           docker logs boot-test 2>&1 | tee /tmp/boot.log
@@ -108,6 +114,14 @@ jobs:
           docker rm -f boot-test >/dev/null
           if [ "$ok" != 1 ]; then
             echo "FAIL: web terminal did not answer on port 7681 within 60s"
+            exit 1
+          fi
+          if [ "$outside" != 403 ]; then
+            echo "FAIL: a non-ingress client got HTTP ${outside} on 7681, expected 403"
+            exit 1
+          fi
+          if [ "$ttyd_direct" != 000 ]; then
+            echo "FAIL: ttyd answered on ${ip}:7682 (HTTP ${ttyd_direct}); it must listen on loopback only"
             exit 1
           fi
           if grep 'ERROR' /tmp/boot.log \
@@ -120,14 +134,14 @@ jobs:
             echo "FAIL: run.sh never reached start_web_terminal"
             exit 1
           fi
-          echo "OK: add-on booted and ttyd is serving"
+          echo "OK: add-on booted, serves the terminal, and refuses non-ingress clients"
 
       - name: Smoke test — key binaries available
         if: matrix.arch == 'amd64'
         run: |
           docker run --rm --entrypoint /bin/bash \
             test/claude-terminal:amd64 -c '
-              for bin in node npm claude git tmux ttyd jq curl uv; do
+              for bin in node npm claude git tmux ttyd nginx jq curl uv; do
                 if ! which "$bin" > /dev/null 2>&1; then
                   echo "FAIL: $bin not found"
                   exit 1
