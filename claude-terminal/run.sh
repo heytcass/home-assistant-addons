@@ -452,9 +452,29 @@ warn_remote_control() {
     fi
 }
 
+# Put nginx in front of ttyd so only the Supervisor's ingress proxy (and
+# loopback) can reach the terminal — see scripts/nginx.conf for why (#146).
+# DEV_ALLOW_ANY_CLIENT=1 opens it to any client for local podman testing; the
+# Supervisor never sets arbitrary environment variables on an add-on, so a
+# real install cannot end up in this mode.
+start_ingress_proxy() {
+    local dev_allow=/run/claude-terminal/allow-any-client.conf
+    rm -f "$dev_allow"
+    if [ "${DEV_ALLOW_ANY_CLIENT:-}" = "1" ]; then
+        bashio::log.warning "DEV_ALLOW_ANY_CLIENT=1: the terminal accepts connections from any client. Local development only."
+        mkdir -p "$(dirname "$dev_allow")"
+        echo 'allow all;' > "$dev_allow"
+    fi
+
+    if ! nginx -c /opt/scripts/nginx.conf; then
+        bashio::log.error "nginx failed to start; the web terminal will be unreachable"
+    fi
+}
+
 # Start main web terminal
 start_web_terminal() {
-    local port=7681
+    # Loopback only: nginx (start_ingress_proxy) owns the add-on's port 7681
+    local port=7682
     local flags
     flags=$(build_claude_flags)
 
@@ -473,7 +493,7 @@ start_web_terminal() {
     session_command=$(get_session_command "$flags")
     workdir=$(get_working_directory)
 
-    bashio::log.info "Starting web terminal on port ${port} (auto_launch_claude=$(bashio::config 'auto_launch_claude' 'true'))"
+    bashio::log.info "Starting web terminal on loopback port ${port}, served on 7681 via nginx (auto_launch_claude=$(bashio::config 'auto_launch_claude' 'true'))"
 
     # Terminal theme - dark palette with terracotta accents (#d97757)
     local ttyd_theme='{"background":"#1a1b26","foreground":"#c0caf5","cursor":"#d97757","cursorAccent":"#1a1b26","selectionBackground":"#33467c","selectionForeground":"#c0caf5","black":"#15161e","red":"#f7768e","green":"#9ece6a","yellow":"#e0af68","blue":"#7aa2f7","magenta":"#bb9af7","cyan":"#7dcfff","white":"#a9b1d6","brightBlack":"#414868","brightRed":"#f7768e","brightGreen":"#9ece6a","brightYellow":"#e0af68","brightBlue":"#7aa2f7","brightMagenta":"#bb9af7","brightCyan":"#7dcfff","brightWhite":"#c0caf5"}'
@@ -486,7 +506,7 @@ start_web_terminal() {
     # and HA navigation instead of stacking new ones.
     exec ttyd \
         --port "${port}" \
-        --interface 0.0.0.0 \
+        --interface lo \
         --writable \
         --ping-interval 30 \
         --client-option enableReconnect=true \
@@ -521,6 +541,7 @@ main() {
     generate_ha_context
     start_login_url_watcher
     setup_ha_mcp
+    start_ingress_proxy
     start_web_terminal
 }
 

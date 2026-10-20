@@ -1,5 +1,27 @@
 # Changelog
 
+## 2.7.0
+
+### 🔒 The terminal now answers only to Home Assistant's ingress proxy
+ttyd listened on `0.0.0.0:7681` with no credentials. Every add-on shares the
+internal hassio Docker network, so any other add-on (including third-party
+ones) could open a root shell here, one that holds the Supervisor manager
+role, Home Assistant API access and your Claude/GitHub credentials, with no
+Home Assistant login involved. Reported by
+[@WheapLabs](https://github.com/WheapLabs) (#146); thank you.
+
+ttyd now listens on loopback only, and nginx in front of it on port 7681
+accepts connections from the Supervisor's ingress proxy (`172.30.32.2`) and
+refuses everyone else with a 403. Nothing changes when you open the terminal
+from the sidebar.
+
+### ⚠️ Direct port access removed
+The optional `7681/tcp` host port mapping is gone. That port served the
+same unauthenticated root shell to anyone on your network who could reach
+it, and with the ingress-only allowlist it would only ever answer 403. The
+sidebar panel and the add-on's "Open Web UI" button both go through ingress
+and work as before.
+
 ## 2.6.2
 
 ### 📋 Copying: Shift+drag, and the terminal now says so

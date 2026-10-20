@@ -1,7 +1,7 @@
 ---
 name: "Claude Terminal"
 description: "Web terminal with Anthropic's Claude Code CLI and persistent auth"
-version: "2.6.2"
+version: "2.7.0"
 slug: "claude_terminal"
 init: false
 
@@ -25,11 +25,9 @@ panel_icon: mdi:code-braces
 panel_title: "Claude Terminal"
 panel_admin: true
 
-# Port configuration
-ports:
-  7681/tcp: null
-ports_description:
-  7681/tcp: "Direct web terminal access. Not needed for ingress, and NOT password-protected: anyone who can reach this port gets a root shell in the container, with no Home Assistant login. Leave unset unless the port is firewalled."
+# No `ports:` mapping. The terminal is reachable through ingress only: nginx
+# in front of ttyd accepts the Supervisor's ingress proxy (172.30.32.2) and
+# nothing else, so a host port would only ever answer 403 (#146).
 
 # Add-on configuration options
 options:
@@ -80,6 +78,3 @@ homeassistant_api: true
 
 # Service startup configuration
 startup: services
-
-# Web UI access URL
-webui: http://[HOST]:[PORT:7681]/

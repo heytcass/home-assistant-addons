@@ -30,7 +30,7 @@ direnv allow
 podman build --build-arg BUILD_FROM=ghcr.io/home-assistant/amd64-base:3.21 -t local/claude-terminal ./claude-terminal
 
 # Run locally
-podman run -p 7681:7681 -v $(pwd)/config:/config local/claude-terminal
+podman run -e DEV_ALLOW_ANY_CLIENT=1 -p 7681:7681 -v $(pwd)/config:/config local/claude-terminal
 
 # Lint
 hadolint ./claude-terminal/Dockerfile
@@ -47,7 +47,7 @@ curl -X GET http://localhost:7681/
 - **Dockerfile** - Alpine-based image; all runtime packages (ttyd, tmux, nodejs, uv, ...) are baked in so startup never depends on the network
 - **build.yaml** - Multi-architecture build configuration (amd64, aarch64); images are prebuilt on GHCR and pulled by the Supervisor. **Images are built only when a merge to main bumps `version` in config.yaml** (release.yml tags `v<version>` and publishes) — any other merge ships nothing to users
 - **run.sh** - Startup script: environment/persistence setup, background Claude auto-update, ttyd launch
-- **scripts/** - Support scripts copied to `/opt/scripts/` (welcome banner, health check, HA context, MCP setup, persist-install, tmux config)
+- **scripts/** - Support scripts copied to `/opt/scripts/` (welcome banner, health check, HA context, MCP setup, persist-install, tmux config, nginx config)
 
 ### Container Execution Flow
 1. `init_environment` — point HOME/XDG at `/data` (persistent), prepend `/data/home/.local/bin` to PATH, clean legacy npm cache, migrate old credentials
@@ -56,10 +56,12 @@ curl -X GET http://localhost:7681/
 4. `install_persistent_packages` — user-configured apk/pip packages
 5. `generate_ha_context` — background CLAUDE.md generation via Supervisor API
 6. `setup_ha_mcp` — register ha-mcp with `claude mcp add`
-7. `start_web_terminal` — `exec ttyd ... tmux new-session -A -s claude 'claude [flags]'` (or a plain shell when `auto_launch_claude: false`)
+7. `start_ingress_proxy` — nginx on 7681, accepting only the Supervisor's ingress proxy (172.30.32.2) and loopback
+8. `start_web_terminal` — `exec ttyd` on `127.0.0.1:7682` running `tmux new-session -A -s claude 'claude [flags]'` (or a plain shell when `auto_launch_claude: false`)
 
 ### Key Design Rules
 - **Nothing on the boot path may hit the network or block on input.** Network work (updates, context generation) is backgrounded; packages ship in the image.
+- **Only the ingress proxy may reach the terminal.** All add-ons share the hassio Docker network and ttyd has no auth, so ttyd stays on loopback and nginx (`scripts/nginx.conf`) admits only 172.30.32.2. Never bind ttyd to a routable address or add a host port. Local podman runs need `-e DEV_ALLOW_ANY_CLIENT=1` or they get a 403.
 - **Everything persistent lives in `/data`** (HOME is `/data/home`). The container filesystem is recreated on every restart.
 - **Two Claude copies exist**: the native musl binary baked into the image at `/usr/local/bin/claude` (fallback, frozen at build time, fetched straight from the npm registry — no npm/Node during build, which crashes under QEMU in aarch64 CI builds) and the native install in `/data/home/.local/bin` (persists, self-updates, wins via PATH).
 - **No custom session UI.** tmux `new-session -A` handles reconnects; Claude Code's own `-c`/`-r` handle continue/resume.
@@ -74,7 +76,7 @@ podman build --build-arg BUILD_FROM=ghcr.io/home-assistant/amd64-base:3.21 -t lo
 # Run test container (options.json lives in /data inside a real add-on)
 mkdir -p /tmp/test-data
 echo '{"auto_launch_claude": false}' > /tmp/test-data/options.json
-podman run -d --name test-claude-dev -p 7681:7681 \
+podman run -d --name test-claude-dev -e DEV_ALLOW_ANY_CLIENT=1 -p 7681:7681 \
   -v /tmp/test-config:/config -v /tmp/test-data:/data local/claude-terminal:test
 
 # Check logs / test at http://localhost:7681
