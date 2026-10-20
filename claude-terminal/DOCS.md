@@ -12,7 +12,7 @@ This add-on runs Anthropic's [Claude Code](https://docs.anthropic.com/en/docs/cl
 2. Install the Claude Terminal add-on
 3. Start the add-on
 4. Click "OPEN WEB UI" to access the terminal
-5. On first use, follow the OAuth prompts to log in to your Anthropic account
+5. On first use, run through the OAuth login: a **"Claude Code login"** notification with a clickable authorize link appears in Home Assistant (bell icon) within a few seconds. Open it, authorize, and paste the code you get back into the terminal
 
 Your credentials are stored under `/data` and persist across restarts and add-on updates, so you won't need to log in again.
 
@@ -83,10 +83,11 @@ Disable it with `enable_ha_mcp: false` if you don't want Claude to have this acc
 
 ## Troubleshooting
 
-- **Can't copy the OAuth login URL / "Authorization failed – Invalid request format"**: the browser terminal's clipboard path truncates very long payloads, and the login URL is one — a cut-off `state` parameter causes exactly that authorization error. Reliable path: while the login prompt is showing, open a second tmux window (`Ctrl+B` then `C`), run `claude-login-url`, and open `/config/claude-login-url.txt` with the File Editor add-on (or over Samba) — copy the URL from there. Switch back with `Ctrl+B` then `L` to paste the resulting code. Delete the file when done. Don't click the link in the terminal directly: link detection truncates URLs that wrap across lines.
+- **Logging in**: use the link in the **"Claude Code login"** Home Assistant notification rather than copying the URL out of the terminal. The URL is long enough that the terminal wraps it, and both link detection and copying across the wrap can corrupt it — a damaged `state` or `code_challenge` gets you "Invalid request format" or `OAuth error: Request failed with status code 400`. The notification dismisses itself once you're logged in. If it never appears, open a second tmux window (`Ctrl+B` then `C`), run `claude-login-url`, and copy the URL from `/config/claude-login-url.txt` via the File Editor add-on or Samba (switch back with `Ctrl+B` then `L`; delete the file afterwards).
+- **Login still fails with a 400**: the code you paste back is single-use and short-lived, and only works in the same `claude` process that printed the URL — so paste it promptly, and start over with a fresh `/login` if the add-on restarted in between. When you paste, Claude masks the code and shows its last few characters; that's normal, and no particular length is expected. If the browser flow keeps failing, skip it: run `claude setup-token` on any machine with a browser, put the token in the `claude_code_oauth_token` option, and restart the add-on (no Remote Control with token auth).
 - **Claude exits immediately or behaves oddly**: restart the add-on so the background auto-updater can fetch the latest Claude Code; check the add-on log for update messages.
 - **Diagnostics**: run `claude-doctor` in the terminal for connectivity, memory, and environment checks.
-- **Authentication problems**: run `claude /logout` inside Claude, then log in again.
+- **Authentication problems**: run `/logout` inside Claude, then `/login` again.
 - **Old backups too large?** Versions before 2.3.0 accumulated an npm cache in the add-on's data directory (up to several GB). 2.3.0 removes it automatically on first boot — take a fresh backup after upgrading.
 
 ## Credits
