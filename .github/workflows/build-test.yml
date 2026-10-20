@@ -127,7 +127,7 @@ jobs:
         run: |
           docker run --rm --entrypoint /bin/bash \
             test/claude-terminal:amd64 -c '
-              for bin in node npm claude git tmux ttyd jq curl uv; do
+              for bin in node npm claude git tmux ttyd nginx jq curl uv; do
                 if ! which "$bin" > /dev/null 2>&1; then
                   echo "FAIL: $bin not found"
                   exit 1

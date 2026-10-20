@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+### 🔒 The terminal is no longer open to other add-ons (#146)
+ttyd listened on `0.0.0.0:7681` with no login. The port was not published
+on the LAN, but every add-on sits on the same internal `hassio` network, so
+any of them — including third-party ones — could open a root shell here,
+with the Supervisor `manager` role, Home Assistant admin access and your
+Claude/GitHub credentials. ttyd now listens on `127.0.0.1` only, and a small
+nginx gate on port 7681 lets through the Supervisor's ingress proxy alone;
+anything else gets `403 Forbidden`. The sidebar panel works as before.
+
+If you publish port 7681 on the host on purpose, nothing changes for you:
+the gate stays open (and the log says so). Local test runs without a
+Supervisor (podman, CI) are open too.
+
+**If you automated the terminal** from Home Assistant or another add-on via
+`ws://<add-on>:7681/ws`, switch it to ingress — DOCS.md shows how.
+
 ## 2.6.2
 
 ### 📋 Copying: Shift+drag, and the terminal now says so

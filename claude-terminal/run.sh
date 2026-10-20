@@ -452,9 +452,67 @@ warn_remote_control() {
     fi
 }
 
+# Gate the web terminal: ttyd itself has no IP filter and no login, so it
+# listens on loopback only and nginx answers the ingress port in front of it.
+# Every add-on shares the hassio network, so without this any of them could
+# open ws://<this add-on>:7681/ws and get a root shell (#146). Only the
+# Supervisor's ingress proxy (172.30.32.2) is let through. Users who publish
+# port 7681 on the host keep the documented unauthenticated access; outside a
+# Supervisor (no SUPERVISOR_TOKEN: local podman runs, CI smoke test) the gate
+# is open too.
+start_ingress_gate() {
+    local public_port=$1 ttyd_port=$2
+    local allow_all=false
+    if [ -z "${SUPERVISOR_TOKEN:-}" ]; then
+        allow_all=true
+        bashio::log.info "No Supervisor: web terminal reachable from any address (local test run)"
+    elif bashio::var.has_value "$(bashio::addon.port "${public_port}/tcp")"; then
+        allow_all=true
+        bashio::log.warning "Port ${public_port} is published on the host: the terminal behind it has no login (see DOCS.md)"
+    fi
+
+    local access="allow 172.30.32.2;
+        deny all;"
+    if [ "$allow_all" = true ]; then
+        access="allow all;"
+    fi
+
+    mkdir -p /tmp/nginx
+    cat > /tmp/nginx/nginx.conf <<NGINX
+worker_processes 1;
+pid /tmp/nginx/nginx.pid;
+error_log stderr warn;
+events { worker_connections 64; }
+http {
+    access_log off;
+    client_body_temp_path /tmp/nginx/body;
+    proxy_temp_path /tmp/nginx/proxy;
+    map \$http_upgrade \$connection_upgrade {
+        default upgrade;
+        ''      close;
+    }
+    server {
+        listen ${public_port};
+        ${access}
+        location / {
+            proxy_pass http://127.0.0.1:${ttyd_port};
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade \$http_upgrade;
+            proxy_set_header Connection \$connection_upgrade;
+            proxy_set_header Host \$host;
+            proxy_buffering off;
+            proxy_read_timeout 1d;
+            proxy_send_timeout 1d;
+        }
+    }
+}
+NGINX
+    nginx -c /tmp/nginx/nginx.conf || bashio::exit.nok "Could not start the web terminal gate (nginx)"
+}
+
 # Start main web terminal
 start_web_terminal() {
-    local port=7681
+    local port=7681 ttyd_port=7682
     local flags
     flags=$(build_claude_flags)
 
@@ -484,9 +542,11 @@ start_web_terminal() {
     # ttyd execs its argv directly, so tmux is started without an extra shell
     # in between. tmux -A attaches to the live session on browser reconnects
     # and HA navigation instead of stacking new ones.
+    start_ingress_gate "${port}" "${ttyd_port}"
+
     exec ttyd \
-        --port "${port}" \
-        --interface 0.0.0.0 \
+        --port "${ttyd_port}" \
+        --interface 127.0.0.1 \
         --writable \
         --ping-interval 30 \
         --client-option enableReconnect=true \
