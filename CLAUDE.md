@@ -88,7 +88,7 @@ podman exec test-claude-dev chmod +x /opt/scripts/welcome.sh
 podman stop test-claude-dev && podman rm test-claude-dev
 ```
 
-Note: `bashio::config` in the current base image fetches options from the Supervisor API, not `/data/options.json`. Outside a real Supervisor every read logs a bashio `ERROR: Failed to get addon config from Supervisor API` and returns empty, so run.sh's own defaults apply (shell mode, no auto-update) regardless of options.json. To exercise options for real, use `scripts/dev-deploy.sh` on an HA box.
+Note: `bashio::config` in the current base image fetches options from the Supervisor API, not `/data/options.json`. Outside a real Supervisor every read logs a bashio `ERROR: Failed to get addon config from Supervisor API` and returns empty, so run.sh's own defaults apply (shell mode, no auto-update) regardless of options.json. The bashio in the 3.24 base makes such a read *fail* rather than return empty, so every assignment-form read in run.sh carries a fallback (`x=$(bashio::config ...) || x=""`); without it, `set -e` ends startup at the first option read whenever the Supervisor API is unreachable. To exercise options for real, use `scripts/dev-deploy.sh` on an HA box.
 
 ### Production Testing
 - **Local Testing**: Use `run-addon` to test on localhost:7681

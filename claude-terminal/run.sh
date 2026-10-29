@@ -271,7 +271,7 @@ install_persistent_packages() {
     # Collect APK packages from Home Assistant config
     if bashio::config.has_value 'persistent_apk_packages'; then
         local config_apk
-        config_apk=$(bashio::config 'persistent_apk_packages')
+        config_apk=$(bashio::config 'persistent_apk_packages') || config_apk=""
         if [ -n "$config_apk" ] && [ "$config_apk" != "null" ]; then
             apk_packages="$config_apk"
         fi
@@ -280,7 +280,7 @@ install_persistent_packages() {
     # Collect pip packages from Home Assistant config
     if bashio::config.has_value 'persistent_pip_packages'; then
         local config_pip
-        config_pip=$(bashio::config 'persistent_pip_packages')
+        config_pip=$(bashio::config 'persistent_pip_packages') || config_pip=""
         if [ -n "$config_pip" ] && [ "$config_pip" != "null" ]; then
             pip_packages="$config_pip"
         fi
@@ -375,7 +375,7 @@ build_claude_flags() {
     fi
 
     local extra
-    extra=$(bashio::config 'claude_extra_args' '')
+    extra=$(bashio::config 'claude_extra_args' '') || extra=""
     if [ -n "$extra" ] && [ "$extra" != "null" ]; then
         flags="${flags:+$flags }$extra"
     fi
@@ -389,7 +389,7 @@ build_claude_flags() {
 # on first use of a new directory (stored in ~/.claude.json), then remembers.
 get_working_directory() {
     local dir
-    dir=$(bashio::config 'working_directory' '')
+    dir=$(bashio::config 'working_directory' '') || dir=""
     if [ -z "$dir" ] || [ "$dir" = "null" ]; then
         echo "/config"
         return 0
@@ -408,7 +408,7 @@ get_working_directory() {
 # reach it. The value itself is never logged.
 export_oauth_token() {
     local token
-    token=$(bashio::config 'claude_code_oauth_token' '')
+    token=$(bashio::config 'claude_code_oauth_token' '') || token=""
     if [ -n "$token" ] && [ "$token" != "null" ]; then
         export CLAUDE_CODE_OAUTH_TOKEN="$token"
         bashio::log.info "CLAUDE_CODE_OAUTH_TOKEN set from add-on configuration"
