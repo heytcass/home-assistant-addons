@@ -52,7 +52,7 @@ ha-context      # refresh the Home Assistant context file
 ### Terminal tips
 
 - **Scrolling**: use the mouse wheel — tmux copy-mode opens automatically. Press `q` to jump back to the bottom.
-- **Copying**: hold **Shift** while you drag to select. That bypasses tmux and uses the browser terminal's own selection, which is copied to your clipboard as soon as you release (a ✂ flashes). Wrapped lines are copied with line breaks, so rejoin long ones (like URLs) by hand. On macOS, if Shift doesn't select, try Option.
+- **Copying**: hold **Shift** while you drag to select. That bypasses tmux and uses the browser terminal's own selection, which is copied to your clipboard as soon as you release (a ✂ flashes). Wrapped lines are copied with line breaks, so rejoin long ones (like URLs) by hand. On macOS, hold **Option** instead of Shift.
 - **Plain drag (no Shift)** selects in tmux and says it copied, but the text only lands in tmux's own buffer: the browser terminal (ttyd 1.7.7) ignores tmux's clipboard escape sequence (OSC 52). Use Shift+drag until that's fixed (#125).
 - **Pasting**: use `Ctrl+Shift+V` (or right-click, depending on browser).
 
