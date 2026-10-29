@@ -55,6 +55,7 @@ ha-context      # refresh the Home Assistant context file
 - **Copying**: drag to select. When you let go, the selection is copied to your clipboard and a small "Copied to clipboard" message appears in the corner. This works for Claude Code's own copy actions too (such as "press c to copy").
 - **If the browser blocks it** (the message says so instead; most likely over plain-HTTP Home Assistant, where browsers restrict clipboard access): hold **Shift** while you drag. That bypasses tmux and uses the browser terminal's own selection, which is copied as soon as you release (a ✂ flashes). Wrapped lines are copied with line breaks, so rejoin long ones (like URLs) by hand.
 - **Pasting**: use `Ctrl+Shift+V` (or right-click, depending on browser).
+- **New line without sending**: `Shift+Enter` inserts a line break in Claude's prompt (the terminal sends `\` + Enter for it, which Claude Code treats as a newline). `/terminal-setup` isn't needed and can't configure this browser terminal.
 
 ### File access
 

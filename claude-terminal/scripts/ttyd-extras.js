@@ -12,7 +12,14 @@
 // them would let any process that can write to the terminal read the
 // user's clipboard.
 //
-// The decoder is pure and exported for the Node tests in tests/.
+// Shift+Enter: xterm.js sends a plain carriage return for it, so Claude
+// Code submits the prompt. Claude's /terminal-setup can't fix that here (it
+// only knows desktop terminal apps), so send backslash + return instead,
+// which Claude Code reads as "insert a newline" (and bash as a line
+// continuation).
+//
+// The decoder and key filter are pure and exported for the Node tests in
+// tests/.
 (function (root) {
     'use strict';
 
@@ -50,7 +57,16 @@
         }
     }
 
-    var api = { decodeOsc52: decodeOsc52 };
+    // Shift+Enter alone (no Ctrl/Alt/Meta). Every event of that chord is
+    // claimed so xterm.js never also sends its own CR; only keydown inputs.
+    function isShiftEnter(event) {
+        return event.key === 'Enter' && event.shiftKey &&
+            !event.ctrlKey && !event.altKey && !event.metaKey;
+    }
+
+    var SHIFT_ENTER_INPUT = '\\\r';
+
+    var api = { decodeOsc52: decodeOsc52, isShiftEnter: isShiftEnter, SHIFT_ENTER_INPUT: SHIFT_ENTER_INPUT };
     if (typeof module !== 'undefined' && module.exports) {
         module.exports = api;
         return;
@@ -139,6 +155,11 @@
         if (!term || term === registered || !term.parser) return;
         registered = term;
         term.parser.registerOscHandler(52, onOsc52);
+        term.attachCustomKeyEventHandler(function (event) {
+            if (!isShiftEnter(event)) return true;
+            if (event.type === 'keydown') term.input(SHIFT_ENTER_INPUT, true);
+            return false;
+        });
     }
     attach();
     win.setInterval(attach, 1000);
