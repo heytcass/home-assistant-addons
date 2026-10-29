@@ -88,7 +88,7 @@ Disable it with `enable_ha_mcp: false` if you don't want Claude to have this acc
 - **Claude exits immediately or behaves oddly**: restart the add-on so the background auto-updater can fetch the latest Claude Code; check the add-on log for update messages.
 - **Diagnostics**: run `claude-doctor` in the terminal for connectivity, memory, and environment checks.
 - **Authentication problems**: run `/logout` inside Claude, then `/login` again.
-- **Old backups too large?** Versions before 2.3.0 accumulated an npm cache in the add-on's data directory (up to several GB). 2.3.0 removes it automatically on first boot — take a fresh backup after upgrading.
+- **Old backups too large?** Versions before 2.3.0 accumulated an npm cache in the add-on's data directory (up to several GB). 2.3.0 removes it automatically on first boot — take a fresh backup after upgrading. Caches and the self-updating Claude Code binary are also left out of backups; after a restore the add-on runs its bundled Claude Code and reinstalls the current one in the background.
 
 ## Credits
 
