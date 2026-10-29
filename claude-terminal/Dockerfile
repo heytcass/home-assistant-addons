@@ -2,8 +2,11 @@ ARG BUILD_FROM
 FROM ${BUILD_FROM}
 
 # All runtime packages are baked into the image so startup never depends on
-# the network (ttyd/tmux/jq were previously apk-installed on every boot)
-RUN apk add --no-cache \
+# the network (ttyd/tmux/jq were previously apk-installed on every boot).
+# apk upgrade first: the base image's own packages are only as fresh as its
+# last publish, and Alpine ships CVE fixes as package revisions in between.
+RUN apk upgrade --no-cache \
+    && apk add --no-cache \
     bash \
     curl \
     git \
