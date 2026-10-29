@@ -478,6 +478,16 @@ start_web_terminal() {
     # Terminal theme - dark palette with terracotta accents (#d97757)
     local ttyd_theme='{"background":"#1a1b26","foreground":"#c0caf5","cursor":"#d97757","cursorAccent":"#1a1b26","selectionBackground":"#33467c","selectionForeground":"#c0caf5","black":"#15161e","red":"#f7768e","green":"#9ece6a","yellow":"#e0af68","blue":"#7aa2f7","magenta":"#bb9af7","cyan":"#7dcfff","white":"#a9b1d6","brightBlack":"#414868","brightRed":"#f7768e","brightGreen":"#9ece6a","brightYellow":"#e0af68","brightBlue":"#7aa2f7","brightMagenta":"#bb9af7","brightCyan":"#7dcfff","brightWhite":"#c0caf5"}'
 
+    # ttyd's own page with ttyd-extras.js injected at image build (OSC 52
+    # clipboard, #125). Without it, stock ttyd still works; copying just
+    # falls back to Shift+drag.
+    local index_args=()
+    if [ -f /opt/ttyd/index.html ]; then
+        index_args=(--index /opt/ttyd/index.html)
+    else
+        bashio::log.warning "Patched terminal page missing; serving ttyd's stock page (copy with Shift+drag)"
+    fi
+
     # Run ttyd with keepalive configuration to prevent WebSocket disconnects
     # See: https://github.com/heytcass/home-assistant-addons/issues/24
     #
@@ -494,6 +504,7 @@ start_web_terminal() {
         --client-option reconnectInterval=5 \
         --client-option "theme=${ttyd_theme}" \
         --client-option fontSize=14 \
+        "${index_args[@]}" \
         tmux new-session -A -s claude -c "$workdir" "$session_command"
 }
 

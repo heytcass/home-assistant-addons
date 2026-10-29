@@ -64,5 +64,10 @@ COPY run.sh /run.sh
 COPY scripts/ /opt/scripts/
 RUN chmod +x /run.sh /opt/scripts/*.sh
 
+# ttyd's own page plus ttyd-extras.js (the OSC 52 clipboard handler),
+# served by run.sh via `ttyd --index`. Built here, once, from this image's
+# ttyd, so the boot path never fetches or patches anything.
+RUN /opt/scripts/build-ttyd-index.sh /opt/ttyd/index.html
+
 # Use exec form for better signal handling
 CMD ["/run.sh"]
