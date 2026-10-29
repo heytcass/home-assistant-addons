@@ -28,9 +28,9 @@ jobs:
       matrix:
         include:
           - arch: amd64
-            build_from: ghcr.io/home-assistant/amd64-base:3.21
+            build_from: ghcr.io/home-assistant/amd64-base:3.24
           - arch: aarch64
-            build_from: ghcr.io/home-assistant/aarch64-base:3.21
+            build_from: ghcr.io/home-assistant/aarch64-base:3.24
     steps:
       - uses: actions/checkout@v4
 

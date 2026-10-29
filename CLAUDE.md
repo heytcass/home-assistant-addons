@@ -27,7 +27,7 @@ direnv allow
 ### Manual Commands (without aliases)
 ```bash
 # Build
-podman build --build-arg BUILD_FROM=ghcr.io/home-assistant/amd64-base:3.21 -t local/claude-terminal ./claude-terminal
+podman build --build-arg BUILD_FROM=ghcr.io/home-assistant/amd64-base:3.24 -t local/claude-terminal ./claude-terminal
 
 # Run locally
 podman run -p 7681:7681 -v $(pwd)/config:/config local/claude-terminal
@@ -69,7 +69,7 @@ curl -X GET http://localhost:7681/
 ### Local Container Testing
 ```bash
 # Build test version
-podman build --build-arg BUILD_FROM=ghcr.io/home-assistant/amd64-base:3.21 -t local/claude-terminal:test ./claude-terminal
+podman build --build-arg BUILD_FROM=ghcr.io/home-assistant/amd64-base:3.24 -t local/claude-terminal:test ./claude-terminal
 
 # Run test container (options.json lives in /data inside a real add-on)
 mkdir -p /tmp/test-data
