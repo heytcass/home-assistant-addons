@@ -346,6 +346,13 @@ generate_ha_context() {
 # clipboard) needed — see login-url-watcher.sh for why the clipboard path
 # can't be relied on.
 start_login_url_watcher() {
+    # With claude_code_oauth_token there is no browser login to deliver, and
+    # no .credentials.json either, so the watcher would see every session as
+    # logged out and post whatever claude.ai link turned up
+    if [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then
+        bashio::log.info "Login URL watcher not needed (claude_code_oauth_token is set)"
+        return 0
+    fi
     if [ -f /usr/local/bin/login-url-watcher ]; then
         bashio::log.info "Starting login URL watcher in background"
         (/usr/local/bin/login-url-watcher >/dev/null 2>&1 || true) &
