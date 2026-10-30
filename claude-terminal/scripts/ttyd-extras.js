@@ -138,7 +138,7 @@
         if (result.kind === 'write' && result.text) {
             writeClipboard(result.text).then(function (ok) {
                 notify(ok ? 'Copied to clipboard'
-                    : 'The browser blocked the copy. Hold Shift while dragging instead.', ok);
+                    : 'The browser blocked the copy. Hold Shift (Option on Mac) while dragging instead.', ok);
             });
         }
         // Everything else (read requests, empty or invalid payloads) is
