@@ -88,7 +88,13 @@ function element() {
 // manual timers.
 function loadPage({ secure = true, clipboard = 'ok', gesture = true } = {}) {
     const handlers = [];
-    const term = { parser: { registerOscHandler: (id, fn) => handlers.push({ id, fn, term }) } };
+    const inputs = [];
+    const keyHandlers = [];
+    const term = {
+        parser: { registerOscHandler: (id, fn) => handlers.push({ id, fn, term }) },
+        attachCustomKeyEventHandler: (fn) => keyHandlers.push(fn),
+        input: (data, wasUserInput) => inputs.push({ data, wasUserInput }),
+    };
     const written = [];
     const copied = [];
     const listeners = new Set();
@@ -138,6 +144,8 @@ function loadPage({ secure = true, clipboard = 'ok', gesture = true } = {}) {
     return {
         win,
         handlers,
+        inputs,
+        key: (event) => keyHandlers[keyHandlers.length - 1](event),
         written,
         copied,
         toast: () => (toasts[0] ? toasts[0].textContent : null),
@@ -210,9 +218,40 @@ test('registers again if ttyd replaces window.term, and only once per instance',
     const page = loadPage();
     page.tick();
     assert.strictEqual(page.handlers.length, 1);
-    const replacement = { parser: { registerOscHandler: (id, fn) => page.handlers.push({ id, fn }) } };
+    const replacement = {
+        parser: { registerOscHandler: (id, fn) => page.handlers.push({ id, fn }) },
+        attachCustomKeyEventHandler() {},
+    };
     page.win.term = replacement;
     page.tick();
     page.tick();
     assert.strictEqual(page.handlers.length, 2);
+});
+
+// --- Shift+Enter ---
+
+const key = (type, k, mods = {}) => Object.assign(
+    { type, key: k, shiftKey: false, ctrlKey: false, altKey: false, metaKey: false }, mods);
+
+test('Shift+Enter sends backslash + return instead of submitting', () => {
+    const page = loadPage();
+    assert.strictEqual(page.key(key('keydown', 'Enter', { shiftKey: true })), false);
+    assert.deepStrictEqual(page.inputs, [{ data: '\\\r', wasUserInput: true }]);
+});
+
+test('Shift+Enter keypress and keyup are claimed without sending anything more', () => {
+    const page = loadPage();
+    assert.strictEqual(page.key(key('keypress', 'Enter', { shiftKey: true })), false);
+    assert.strictEqual(page.key(key('keyup', 'Enter', { shiftKey: true })), false);
+    assert.deepStrictEqual(page.inputs, []);
+});
+
+test('plain Enter and other modifier combinations go through untouched', () => {
+    const page = loadPage();
+    assert.strictEqual(page.key(key('keydown', 'Enter')), true);
+    assert.strictEqual(page.key(key('keydown', 'Enter', { shiftKey: true, ctrlKey: true })), true);
+    assert.strictEqual(page.key(key('keydown', 'Enter', { shiftKey: true, altKey: true })), true);
+    assert.strictEqual(page.key(key('keydown', 'Enter', { shiftKey: true, metaKey: true })), true);
+    assert.strictEqual(page.key(key('keydown', 'a', { shiftKey: true })), true);
+    assert.deepStrictEqual(page.inputs, []);
 });

@@ -56,6 +56,7 @@ ha-context      # refresh the Home Assistant context file
 - **If the browser blocks it** (the message says so instead; most likely over plain-HTTP Home Assistant, where browsers restrict clipboard access): hold **Shift** while you drag (**Option** on macOS). That bypasses tmux and uses the browser terminal's own selection, which is copied as soon as you release (a ✂ flashes). Wrapped lines are copied with line breaks, so rejoin long ones (like URLs) by hand.
 - **Your own tmux settings**: put them in `~/.tmux.local.conf` (`/data/home/.tmux.local.conf`). `~/.tmux.conf` is rewritten from the add-on on every start, and it sources `~/.tmux.local.conf` last, so your settings win and survive restarts.
 - **Pasting**: use `Ctrl+Shift+V` (or right-click, depending on browser).
+- **New line without sending**: `Shift+Enter` inserts a line break in Claude's prompt (the terminal sends `\` + Enter for it, which Claude Code treats as a newline). `/terminal-setup` isn't needed and can't configure this browser terminal.
 
 ### File access
 
