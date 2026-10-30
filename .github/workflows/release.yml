@@ -98,6 +98,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # --no-cache: the builder otherwise pulls the published :latest image
+      # as --cache-from. A release with an unchanged Dockerfile would then
+      # reuse every layer: the apk layer (no Alpine security fixes picked up)
+      # and the bundled Claude Code layer, whose "latest" version is resolved
+      # inside a RUN and so never invalidates the cache on its own.
       - name: Build and push add-on image
         uses: home-assistant/builder@2026.02.1
         with:
@@ -106,6 +111,7 @@ jobs:
             --target /data/claude-terminal \
             --image "${{ matrix.arch }}-addon-claude-terminal" \
             --docker-hub "ghcr.io/${{ github.repository_owner }}" \
+            --no-cache \
             --addon
 
   release:
