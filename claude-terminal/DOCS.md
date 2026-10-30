@@ -54,6 +54,7 @@ ha-context      # refresh the Home Assistant context file
 - **Scrolling**: use the mouse wheel — tmux copy-mode opens automatically. Press `q` to jump back to the bottom.
 - **Copying**: hold **Shift** while you drag to select. That bypasses tmux and uses the browser terminal's own selection, which is copied to your clipboard as soon as you release (a ✂ flashes). Wrapped lines are copied with line breaks, so rejoin long ones (like URLs) by hand. On macOS, if Shift doesn't select, try Option.
 - **Plain drag (no Shift)** selects in tmux and says it copied, but the text only lands in tmux's own buffer: the browser terminal (ttyd 1.7.7) ignores tmux's clipboard escape sequence (OSC 52). Use Shift+drag until that's fixed (#125).
+- **Your own tmux settings**: put them in `~/.tmux.local.conf` (`/data/home/.tmux.local.conf`). `~/.tmux.conf` is rewritten from the add-on on every start, and it sources `~/.tmux.local.conf` last, so your settings win and survive restarts.
 - **Pasting**: use `Ctrl+Shift+V` (or right-click, depending on browser).
 
 ### File access
@@ -90,7 +91,7 @@ Disable it with `enable_ha_mcp: false` if you don't want Claude to have this acc
 - **Claude exits immediately or behaves oddly**: restart the add-on so the background auto-updater can fetch the latest Claude Code; check the add-on log for update messages.
 - **Diagnostics**: run `claude-doctor` in the terminal for connectivity, memory, and environment checks.
 - **Authentication problems**: run `/logout` inside Claude, then `/login` again.
-- **Old backups too large?** Versions before 2.3.0 accumulated an npm cache in the add-on's data directory (up to several GB). 2.3.0 removes it automatically on first boot — take a fresh backup after upgrading.
+- **Old backups too large?** Versions before 2.3.0 accumulated an npm cache in the add-on's data directory (up to several GB). 2.3.0 removes it automatically on first boot — take a fresh backup after upgrading. Caches and the self-updating Claude Code binary are also left out of backups; after a restore the add-on runs its bundled Claude Code and reinstalls the current one in the background.
 
 ## Credits
 

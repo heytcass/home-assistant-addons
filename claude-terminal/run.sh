@@ -53,6 +53,13 @@ init_environment() {
     # binaries accumulate in versions/. XDG_DATA_HOME is exported above.
     prune_claude_versions
 
+    # uv's cache (ha-mcp and its dependencies, fetched by uvx) only grows:
+    # every ha-mcp version leaves its unpacked archives behind (435 MB
+    # observed). It is excluded from backups but still fills the disk.
+    # Prune now, before setup_ha_mcp pre-warms ha-mcp: a running ha-mcp
+    # executes out of the cache and holds its lock.
+    prune_uv_cache
+
     # Migrate any existing authentication files from legacy locations
     migrate_legacy_auth_files "$claude_config_dir"
 
@@ -134,6 +141,29 @@ prune_claude_versions() {
 
     if [ "$pruned" -gt 0 ]; then
         bashio::log.info "Pruned $pruned old Claude Code version(s) from persistent storage"
+    fi
+}
+
+# prune_claude_versions runs at boot and after the boot-time update, but the
+# CLI also self-updates during long sessions. An add-on that stays up for
+# weeks would otherwise keep every in-session update in versions/ until its
+# next restart.
+start_version_pruner() {
+    (
+        while sleep 21600; do
+            prune_claude_versions || true
+        done
+    ) &
+}
+
+# Drop uv cache entries no environment refers to any more. Local-only (no
+# network) and bounded by a timeout so it can never hold up the boot path
+# for long.
+prune_uv_cache() {
+    command -v uv >/dev/null 2>&1 || return 0
+    [ -d "$XDG_CACHE_HOME/uv" ] || return 0
+    if ! timeout 60 uv cache prune >/dev/null 2>&1; then
+        bashio::log.warning "Could not prune the uv cache; continuing"
     fi
 }
 
@@ -346,6 +376,13 @@ generate_ha_context() {
 # clipboard) needed — see login-url-watcher.sh for why the clipboard path
 # can't be relied on.
 start_login_url_watcher() {
+    # With claude_code_oauth_token there is no browser login to deliver, and
+    # no .credentials.json either, so the watcher would see every session as
+    # logged out and post whatever claude.ai link turned up
+    if [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then
+        bashio::log.info "Login URL watcher not needed (claude_code_oauth_token is set)"
+        return 0
+    fi
     if [ -f /usr/local/bin/login-url-watcher ]; then
         bashio::log.info "Starting login URL watcher in background"
         (/usr/local/bin/login-url-watcher >/dev/null 2>&1 || true) &
@@ -426,6 +463,26 @@ get_session_command() {
         # Shell mode: banner + interactive bash, still inside tmux for
         # reconnect persistence. Run 'claude' manually when ready.
         echo "/usr/local/bin/welcome --shell"
+    fi
+}
+
+# Start the tmux session at boot instead of on the first browser visit.
+# ttyd only spawns its command when a client connects, so after every
+# add-on or host restart Claude (and with it Remote Control) stayed down
+# until someone opened the panel. This creates the very session ttyd would
+# have (same name, directory and command, same environment: both inherit
+# run.sh's), so ttyd's `new-session -A` simply attaches to it. If claude
+# exits before anyone connects, the session is gone and ttyd recreates it
+# on the next visit, as before. TERM is what ttyd advertises: tmux.conf
+# copies $TERM into default-terminal when the server starts, and run.sh has
+# none of its own. Shell mode has nothing worth running unattended.
+start_session_now() {
+    local workdir=$1 session_command=$2
+    [ "$(bashio::config 'auto_launch_claude' 'true')" = "true" ] || return 0
+    if TERM=xterm-256color tmux new-session -d -s claude -x 200 -y 50 -c "$workdir" "$session_command"; then
+        bashio::log.info "Claude started in the background; the web terminal attaches to it"
+    else
+        bashio::log.warning "Could not pre-start the tmux session; it will start on the first terminal visit"
     fi
 }
 
@@ -514,6 +571,8 @@ start_web_terminal() {
     # Terminal theme - dark palette with terracotta accents (#d97757)
     local ttyd_theme='{"background":"#1a1b26","foreground":"#c0caf5","cursor":"#d97757","cursorAccent":"#1a1b26","selectionBackground":"#33467c","selectionForeground":"#c0caf5","black":"#15161e","red":"#f7768e","green":"#9ece6a","yellow":"#e0af68","blue":"#7aa2f7","magenta":"#bb9af7","cyan":"#7dcfff","white":"#a9b1d6","brightBlack":"#414868","brightRed":"#f7768e","brightGreen":"#9ece6a","brightYellow":"#e0af68","brightBlue":"#7aa2f7","brightMagenta":"#bb9af7","brightCyan":"#7dcfff","brightWhite":"#c0caf5"}'
 
+    start_session_now "$workdir" "$session_command"
+
     # Run ttyd with keepalive configuration to prevent WebSocket disconnects
     # See: https://github.com/heytcass/home-assistant-addons/issues/24
     #
@@ -553,6 +612,7 @@ main() {
     export_oauth_token
     setup_commands
     update_claude
+    start_version_pruner
     install_persistent_packages
     generate_ha_context
     start_login_url_watcher
