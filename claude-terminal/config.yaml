@@ -25,11 +25,13 @@ panel_icon: mdi:code-braces
 panel_title: "Claude Terminal"
 panel_admin: true
 
-# Port configuration
+# Port configuration. Unset by default: ingress reaches the terminal through
+# nginx, which admits only the Supervisor (172.30.32.2). Publishing 7681 opens
+# the gate to every client — see start_ingress_proxy in run.sh (#146).
 ports:
   7681/tcp: null
 ports_description:
-  7681/tcp: "Direct web terminal access. Not needed for ingress, and NOT password-protected: anyone who can reach this port gets a root shell in the container, with no Home Assistant login. Leave unset unless the port is firewalled."
+  7681/tcp: "Direct web terminal access. Not needed for ingress, and NOT password-protected: anyone who can reach this port (and any other add-on) gets a root shell in the container, with no Home Assistant login. Leave unset unless the port is firewalled."
 
 # Add-on configuration options
 options:
@@ -60,6 +62,25 @@ schema:
     - str
   persistent_pip_packages:
     - str
+
+# Left out of HA backups: everything here is rebuilt or downloaded again.
+# Supervisor tests each pattern with PurePath.match against the file's full
+# path, which matches from the right, so each one is anchored on the data
+# folder (whose name ends in the slug) to keep it from matching elsewhere. If
+# Supervisor moves to relative-path matching these stop matching, which
+# fails safe: backups just grow again.
+#   .cache: XDG_CACHE_HOME (uv's ha-mcp cache lives here)
+#   home/.claude/cache: Claude Code's own cache
+#   home/.local/bin/claude + .local/share/claude/versions: the native Claude
+#     install (~250 MB). Always excluded together, so a restore never brings
+#     back a launcher without its target. With neither present, the bundled
+#     /usr/local/bin/claude runs and update_claude reinstalls in the
+#     background.
+backup_exclude:
+  - "*_claude_terminal/.cache"
+  - "*_claude_terminal/home/.claude/cache"
+  - "*_claude_terminal/home/.local/bin/claude"
+  - "*_claude_terminal/.local/share/claude/versions"
 
 # Volume mappings for file access
 map:
