@@ -58,9 +58,11 @@ add-on's `~/.tmux.conf` is rewritten on every start and sources your file
 last, so your settings win. From [@owine](https://github.com/owine).
 
 ### 🐛 Fixes
-- **Smaller backups:** caches and the self-updating Claude Code binary are
-  left out of backups, and the uv cache and stale in-session updates are
-  pruned. After a restore the add-on runs its bundled Claude Code and
+- **Smaller backups that restore:** caches and the self-updating Claude
+  Code binary are left out of backups, and the uv cache and stale in-session
+  updates are pruned. uv's cache is full of hard links, which Home Assistant
+  can't restore: a backup that contained it failed with "Not a gzipped file"
+  or never finished. After a restore the add-on runs its bundled Claude Code and
   reinstalls the current one in the background. From
   [@owine](https://github.com/owine), [@nsleigh](https://github.com/nsleigh)
   and [@daninden](https://github.com/daninden).
