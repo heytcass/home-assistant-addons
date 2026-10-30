@@ -36,6 +36,9 @@ podman run -p 7681:7681 -v $(pwd)/config:/config local/claude-terminal
 hadolint ./claude-terminal/Dockerfile
 shellcheck -s bash -e SC1008 -e SC1091 claude-terminal/run.sh claude-terminal/scripts/*.sh
 
+# Unit tests (browser page script)
+node --test tests/*.test.js
+
 # Test endpoint
 curl -X GET http://localhost:7681/
 ```
@@ -47,7 +50,7 @@ curl -X GET http://localhost:7681/
 - **Dockerfile** - Alpine-based image; all runtime packages (ttyd, tmux, nodejs, uv, ...) are baked in so startup never depends on the network
 - **build.yaml** - Multi-architecture build configuration (amd64, aarch64); images are prebuilt on GHCR and pulled by the Supervisor. **Images are built only when a merge to main bumps `version` in config.yaml** (release.yml tags `v<version>` and publishes) — any other merge ships nothing to users
 - **run.sh** - Startup script: environment/persistence setup, background Claude auto-update, ttyd launch
-- **scripts/** - Support scripts copied to `/opt/scripts/` (welcome banner, health check, HA context, MCP setup, persist-install, tmux config, nginx config)
+- **scripts/** - Support scripts copied to `/opt/scripts/` (welcome banner, health check, HA context, MCP setup, persist-install, tmux config, nginx config, and `ttyd-extras.js` + `build-ttyd-index.sh` for the browser page)
 
 ### Container Execution Flow
 1. `init_environment` — point HOME/XDG at `/data` (persistent), prepend `/data/home/.local/bin` to PATH, clean legacy npm cache, migrate old credentials
@@ -64,6 +67,7 @@ curl -X GET http://localhost:7681/
 - **Only the ingress proxy may reach the terminal.** All add-ons share the hassio Docker network and ttyd has no auth, so ttyd stays on loopback and nginx (`scripts/nginx.conf`) admits only 172.30.32.2. Two deliberate exceptions open the gate to any client: the user published 7681/tcp on the host (documented trade-off, logged as a warning), or there is no Supervisor at all (no `SUPERVISOR_TOKEN`: local podman runs, CI). If the Supervisor port lookup fails, the gate stays closed. Never bind ttyd to a routable address.
 - **Everything persistent lives in `/data`** (HOME is `/data/home`). The container filesystem is recreated on every restart.
 - **Two Claude copies exist**: the native musl binary baked into the image at `/usr/local/bin/claude` (fallback, frozen at build time, fetched straight from the npm registry — no npm/Node during build, which crashes under QEMU in aarch64 CI builds) and the native install in `/data/home/.local/bin` (persists, self-updates, wins via PATH).
+- **ttyd's own page, plus one script.** Browser-side code lives in `scripts/ttyd-extras.js` (OSC 52 clipboard), which `build-ttyd-index.sh` injects into ttyd's built-in page at image build; run.sh serves it with `ttyd --index`. Change nothing else in that page, and never put a Node/Express wrapper in front of ttyd. Its unit tests are in `tests/`.
 - **No custom session UI.** tmux `new-session -A` handles reconnects; Claude Code's own `-c`/`-r` handle continue/resume.
 
 ## Development Notes

@@ -573,6 +573,16 @@ start_web_terminal() {
 
     start_session_now "$workdir" "$session_command"
 
+    # ttyd's own page with ttyd-extras.js injected at image build (OSC 52
+    # clipboard, #125). Without it, stock ttyd still works; copying just
+    # falls back to Shift+drag.
+    local index_args=()
+    if [ -f /opt/ttyd/index.html ]; then
+        index_args=(--index /opt/ttyd/index.html)
+    else
+        bashio::log.warning "Patched terminal page missing; serving ttyd's stock page (copy with Shift+drag)"
+    fi
+
     # Run ttyd with keepalive configuration to prevent WebSocket disconnects
     # See: https://github.com/heytcass/home-assistant-addons/issues/24
     #
@@ -595,6 +605,7 @@ start_web_terminal() {
         --client-option "theme=${ttyd_theme}" \
         --client-option fontSize=14 \
         --client-option macOptionClickForcesSelection=true \
+        "${index_args[@]}" \
         tmux new-session -A -s claude -c "$workdir" "$session_command"
 }
 

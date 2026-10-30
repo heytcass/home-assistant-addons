@@ -5,9 +5,20 @@ on:
     branches: [main]
     paths:
       - "claude-terminal/**"
+      - "tests/**"
       - ".github/workflows/build-test.yml"
 
 jobs:
+  unit:
+    name: Unit tests (browser page script)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --test tests/*.test.js
+
   lint:
     name: Lint Dockerfile
     runs-on: ubuntu-latest
@@ -158,4 +169,20 @@ jobs:
                 fi
                 echo "OK: $bin"
               done
+            '
+
+      - name: Smoke test — patched terminal page
+        if: matrix.arch == 'amd64'
+        # build-ttyd-index.sh ran at build time; run.sh serves this file with
+        # ttyd --index. Check the clipboard script went in exactly once.
+        run: |
+          docker run --rm --entrypoint /bin/bash \
+            test/claude-terminal:amd64 -c '
+              page=/opt/ttyd/index.html
+              [ -s "$page" ] || { echo "FAIL: $page missing"; exit 1; }
+              [ "$(grep -c "win.ClaudeTerminal = api" "$page")" = 1 ] \
+                || { echo "FAIL: ttyd-extras.js not injected exactly once"; exit 1; }
+              [ "$(grep -o "</body>" "$page" | wc -l)" = 1 ] \
+                || { echo "FAIL: page structure changed"; exit 1; }
+              echo "OK: $page ($(wc -c < "$page") bytes)"
             '
