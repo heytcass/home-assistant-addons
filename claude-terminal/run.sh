@@ -589,6 +589,11 @@ start_web_terminal() {
     # ttyd execs its argv directly, so tmux is started without an extra shell
     # in between. tmux -A attaches to the live session on browser reconnects
     # and HA navigation instead of stacking new ones.
+    #
+    # macOptionClickForcesSelection: with tmux mouse mode on, xterm.js hands
+    # every drag to tmux. Shift forces a browser-side selection elsewhere,
+    # but on macOS that is Option, and only when this option is set (it is
+    # off by default), so the documented Mac workaround did nothing (#125).
     exec ttyd \
         --port "${port}" \
         --interface lo \
@@ -599,6 +604,7 @@ start_web_terminal() {
         --client-option reconnectInterval=5 \
         --client-option "theme=${ttyd_theme}" \
         --client-option fontSize=14 \
+        --client-option macOptionClickForcesSelection=true \
         "${index_args[@]}" \
         tmux new-session -A -s claude -c "$workdir" "$session_command"
 }
