@@ -39,9 +39,9 @@ jobs:
       matrix:
         include:
           - arch: amd64
-            build_from: ghcr.io/home-assistant/amd64-base:3.21
+            build_from: ghcr.io/home-assistant/amd64-base:3.24
           - arch: aarch64
-            build_from: ghcr.io/home-assistant/aarch64-base:3.21
+            build_from: ghcr.io/home-assistant/aarch64-base:3.24
     steps:
       - uses: actions/checkout@v4
 
@@ -98,47 +98,71 @@ jobs:
         # from Supervisor API" ERROR and returns empty; run.sh's defaults then
         # apply (shell mode, no auto-update). Those bashio lines are filtered
         # out below; any other ERROR is ours. What this proves: nothing on the
-        # boot path blocks or dies without a Supervisor, and ttyd answers
-        # within 60s.
+        # boot path blocks or dies without a Supervisor, the terminal answers
+        # through nginx within 60s, ttyd itself (7682) is loopback-only, and
+        # the ingress gate (#146) is right in both modes:
+        #   open   — no SUPERVISOR_TOKEN (local runs): the runner gets a 200
+        #   closed — a token but no reachable Supervisor, so the published-port
+        #            lookup fails: the runner is not 172.30.32.2 and must get
+        #            a 403. This is the fail-closed path a real add-on takes.
         run: |
-          docker run -d --name boot-test -p 7681:7681 \
-            -v "$(mktemp -d):/data" -v "$(mktemp -d):/config" \
-            test/claude-terminal:amd64
+          boot_test() {
+            local mode=$1 expect_outside=$2; shift 2
+            docker run -d --name boot-test -p 7681:7681 "$@" \
+              -v "$(mktemp -d):/data" -v "$(mktemp -d):/config" \
+              test/claude-terminal:amd64 >/dev/null
 
-          ok=0
-          for _ in $(seq 1 30); do
-            if curl -fsS -o /dev/null http://localhost:7681/; then ok=1; break; fi
-            if [ "$(docker inspect -f '{{.State.Running}}' boot-test)" != "true" ]; then break; fi
-            sleep 2
-          done
+            local ok=0
+            for _ in $(seq 1 30); do
+              if docker exec boot-test curl -fsS -o /dev/null http://127.0.0.1:7681/; then ok=1; break; fi
+              if [ "$(docker inspect -f '{{.State.Running}}' boot-test)" != "true" ]; then break; fi
+              sleep 2
+            done
 
-          echo "--- add-on log ---"
-          docker logs boot-test 2>&1 | tee /tmp/boot.log
-          echo "------------------"
+            local ip outside ttyd_direct
+            ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' boot-test)
+            outside=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://localhost:7681/ || true)
+            ttyd_direct=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://${ip}:7682/" || true)
 
-          docker rm -f boot-test >/dev/null
-          if [ "$ok" != 1 ]; then
-            echo "FAIL: web terminal did not answer on port 7681 within 60s"
-            exit 1
-          fi
-          if grep 'ERROR' /tmp/boot.log \
-              | grep -v -e 'Supervisor API' -e 'Something went wrong contacting the API' \
-              | grep -q .; then
-            echo "FAIL: startup logged an ERROR (other than bashio's expected Supervisor-API errors)"
-            exit 1
-          fi
-          if ! grep -q 'Starting web terminal' /tmp/boot.log; then
-            echo "FAIL: run.sh never reached start_web_terminal"
-            exit 1
-          fi
-          echo "OK: add-on booted and ttyd is serving"
+            echo "--- add-on log (${mode}) ---"
+            docker logs boot-test 2>&1 | tee /tmp/boot.log
+            echo "------------------"
+
+            docker rm -f boot-test >/dev/null
+            if [ "$ok" != 1 ]; then
+              echo "FAIL (${mode}): web terminal did not answer on port 7681 within 60s"
+              exit 1
+            fi
+            if [ "$outside" != "$expect_outside" ]; then
+              echo "FAIL (${mode}): a non-ingress client got HTTP ${outside} on 7681, expected ${expect_outside}"
+              exit 1
+            fi
+            if [ "$ttyd_direct" != 000 ]; then
+              echo "FAIL (${mode}): ttyd answered on ${ip}:7682 (HTTP ${ttyd_direct}); it must listen on loopback only"
+              exit 1
+            fi
+            if grep 'ERROR' /tmp/boot.log \
+                | grep -v -e 'Supervisor API' -e 'Something went wrong contacting the API' \
+                | grep -q .; then
+              echo "FAIL (${mode}): startup logged an ERROR (other than bashio's expected Supervisor-API errors)"
+              exit 1
+            fi
+            if ! grep -q 'Starting web terminal' /tmp/boot.log; then
+              echo "FAIL (${mode}): run.sh never reached start_web_terminal"
+              exit 1
+            fi
+            echo "OK (${mode}): booted, serves the terminal, outside client got ${outside}"
+          }
+
+          boot_test open 200
+          boot_test closed 403 -e SUPERVISOR_TOKEN=ci-no-supervisor
 
       - name: Smoke test — key binaries available
         if: matrix.arch == 'amd64'
         run: |
           docker run --rm --entrypoint /bin/bash \
             test/claude-terminal:amd64 -c '
-              for bin in node npm claude git tmux ttyd jq curl uv; do
+              for bin in node npm claude git tmux ttyd nginx jq curl uv; do
                 if ! which "$bin" > /dev/null 2>&1; then
                   echo "FAIL: $bin not found"
                   exit 1
