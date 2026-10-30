@@ -54,6 +54,7 @@ ha-context      # refresh the Home Assistant context file
 - **Scrolling**: use the mouse wheel — tmux copy-mode opens automatically. Press `q` to jump back to the bottom.
 - **Copying**: drag to select. When you let go, the selection is copied to your clipboard and a small "Copied to clipboard" message appears in the corner. This works for Claude Code's own copy actions too (such as "press c to copy").
 - **If the browser blocks it** (the message says so instead; most likely over plain-HTTP Home Assistant, where browsers restrict clipboard access): hold **Shift** while you drag. That bypasses tmux and uses the browser terminal's own selection, which is copied as soon as you release (a ✂ flashes). Wrapped lines are copied with line breaks, so rejoin long ones (like URLs) by hand.
+- **Your own tmux settings**: put them in `~/.tmux.local.conf` (`/data/home/.tmux.local.conf`). `~/.tmux.conf` is rewritten from the add-on on every start, and it sources `~/.tmux.local.conf` last, so your settings win and survive restarts.
 - **Pasting**: use `Ctrl+Shift+V` (or right-click, depending on browser).
 
 ### File access
@@ -79,7 +80,9 @@ Disable it with `enable_ha_mcp: false` if you don't want Claude to have this acc
 
 **Any Home Assistant user can reach the terminal, not just administrators.** `panel_admin: true` hides the sidebar entry from non-admins, but it does not restrict the ingress URL behind it — that is how ingress works in Home Assistant generally, not something this add-on can switch off. Core's ingress view is declared `requires_auth = False` and is gated only by an ingress session cookie, and Core deliberately allows any signed-in user to mint that cookie and to read an add-on's `ingress_url` (see [core#60120](https://github.com/home-assistant/core/pull/60120)). For most add-ons that is harmless; here it means a non-admin account is one URL away from a root shell in this container — which can write anywhere in `/config`, `/addon_configs` and `/share`, and drive the Supervisor API. Treat every account on your instance as trusted while this add-on is installed, and stop or uninstall it if you hand out limited accounts.
 
-**Publishing port 7681 exposes an unauthenticated root shell.** The port is closed by default and ingress does not need it. If you map it to your host anyway, note that the terminal behind it has no login of its own — anyone who can reach that port on your network gets the same shell, with no Home Assistant account involved at all. Leave it unset unless the port is firewalled off and you accept that.
+**The terminal answers only to Home Assistant's ingress proxy.** All add-ons share one internal Docker network, so the terminal process itself (ttyd, which has no login of its own) listens on loopback only, and a small nginx in front of it accepts connections from the Supervisor's ingress address (`172.30.32.2`) and refuses everything else. Other add-ons on your system can't open a shell here.
+
+**Publishing port 7681 exposes an unauthenticated root shell.** The port is closed by default and ingress does not need it. If you map it to your host anyway, the add-on opens the terminal to every client (and logs a warning at startup): anyone who can reach that port on your network, and any other add-on, gets the same shell with no Home Assistant account involved at all. Leave it unset unless the port is firewalled off and you accept that.
 
 ## Troubleshooting
 
@@ -88,7 +91,7 @@ Disable it with `enable_ha_mcp: false` if you don't want Claude to have this acc
 - **Claude exits immediately or behaves oddly**: restart the add-on so the background auto-updater can fetch the latest Claude Code; check the add-on log for update messages.
 - **Diagnostics**: run `claude-doctor` in the terminal for connectivity, memory, and environment checks.
 - **Authentication problems**: run `/logout` inside Claude, then `/login` again.
-- **Old backups too large?** Versions before 2.3.0 accumulated an npm cache in the add-on's data directory (up to several GB). 2.3.0 removes it automatically on first boot — take a fresh backup after upgrading.
+- **Old backups too large?** Versions before 2.3.0 accumulated an npm cache in the add-on's data directory (up to several GB). 2.3.0 removes it automatically on first boot — take a fresh backup after upgrading. Caches and the self-updating Claude Code binary are also left out of backups; after a restore the add-on runs its bundled Claude Code and reinstalls the current one in the background.
 
 ## Credits
 

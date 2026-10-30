@@ -25,19 +25,30 @@ POLL_INTERVAL=3
 
 extract_url() {
     tmux capture-pane -p -J -t claude -S -500 2>/dev/null | awk '
+        # Only an OAuth authorize link is a login URL. Remote Control session
+        # links and doc links are claude.ai URLs too, and with
+        # claude_code_oauth_token set there is no credentials file, so
+        # without this they were posted as "Claude Code login". The check runs
+        # on the reassembled URL, so it holds however the path was wrapped,
+        # and a later non-login link never displaces the login one.
+        function finish() {
+            if (url ~ /\/oauth\/authorize/) found = url
+            url = ""; collecting = 0
+        }
         $0 ~ /https:\/\/(claude\.(com|ai)|console\.anthropic\.com|platform\.claude\.com)/ {
+            finish()
             match($0, /https:\/\/[A-Za-z0-9._~:\/?#@!$&()*+,;=%-]*/)
             url = substr($0, RSTART, RLENGTH)
             collecting = 1
             next
         }
         collecting {
-            if (NF == 0) { collecting = 0 }
+            if (NF == 0) { finish() }
             else if (match($0, /[A-Za-z0-9._~:\/?#@!$&()*+,;=%-]+/)) {
                 url = url substr($0, RSTART, RLENGTH)
             }
         }
-        END { print url }
+        END { finish(); print found }
     '
 }
 

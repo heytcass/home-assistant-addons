@@ -32,7 +32,7 @@ jobs:
           load: true
           tags: scan/claude-terminal:latest
           build-args: |
-            BUILD_FROM=ghcr.io/home-assistant/amd64-base:3.21
+            BUILD_FROM=ghcr.io/home-assistant/amd64-base:3.24
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@v0.35.0

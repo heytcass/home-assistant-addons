@@ -177,12 +177,16 @@ run_diagnostics() {
 
     local errors=0
 
-    check_system_resources || ((errors++))
-    check_cpu_capabilities || ((errors++))
-    check_directory_permissions || ((errors++))
-    check_node_installation || ((errors++))
-    check_claude_cli || ((errors++))
-    check_network_connectivity || ((errors++))
+    # errors=$((errors + 1)), never ((errors++)): the post-increment evaluates
+    # to the old value, so on the first failure the expression is 0, (( ))
+    # returns 1, and bashio's errexit ends the script there, skipping every
+    # later check and the summary below.
+    check_system_resources || errors=$((errors + 1))
+    check_cpu_capabilities || errors=$((errors + 1))
+    check_directory_permissions || errors=$((errors + 1))
+    check_node_installation || errors=$((errors + 1))
+    check_claude_cli || errors=$((errors + 1))
+    check_network_connectivity || errors=$((errors + 1))
 
     bashio::log.info "========================================="
 
