@@ -1,5 +1,90 @@
 # Changelog
 
+## 2.7.0
+
+### 🔒 Only Home Assistant can reach the terminal
+The web terminal (ttyd) listened on every interface with no authentication.
+Every add-on shares the same internal Docker network, so any other add-on
+could open the terminal's WebSocket and get a root shell — with the
+Supervisor API, your Home Assistant API access and your Claude and GitHub
+credentials — whether or not port 7681 was published on the host.
+
+ttyd now listens on loopback only, behind a small nginx gate on 7681 that
+admits Home Assistant's ingress proxy and answers everyone else with 403. It
+fails closed: only a confirmed, published host port opens the gate. If you
+deliberately published `7681/tcp`, the terminal stays reachable there as
+before (that trade-off is documented, and now also logged as a warning at
+boot).
+
+Reported, with the published-port design, by
+[@WheapLabs](https://github.com/WheapLabs) (#146).
+
+### 📋 Plain mouse drag now copies to your clipboard
+Selecting text with the mouse used to copy it into tmux only (#125). The
+add-on now injects one small script into the terminal page that receives
+tmux's copy (OSC 52) and writes it to your browser clipboard, with a
+"Copied to clipboard" note in the corner. Claude Code's own copy actions
+("press c to copy", `/copy`) land on the clipboard the same way.
+
+Where the browser refuses clipboard access (most likely plain-HTTP Home
+Assistant), the note says so and points at Shift+drag. Programs in the
+terminal can write to your clipboard but can never read it: read requests
+are dropped unanswered.
+
+Approach after [@KadenThomp36](https://github.com/KadenThomp36); decoder and
+tests from [@owine](https://github.com/owine); fallback design informed by
+[@ESJavadex](https://github.com/ESJavadex). Reported by
+[@kirkande1](https://github.com/kirkande1) (#125).
+
+### 🍎 Option+drag selects text on macOS
+On a Mac, neither Shift nor Option could force a browser-side selection, so
+the documented workaround never worked there. Option+drag now selects and
+copies, matching Shift+drag elsewhere. Idea from
+[@owine](https://github.com/owine).
+
+### ⏎ Shift+Enter inserts a newline
+Shift+Enter in Claude's prompt now adds a line instead of sending the
+message. `/terminal-setup` isn't needed (and can't configure this browser
+terminal). Idea from [@mattbsea](https://github.com/mattbsea).
+
+### ✨ The session starts at boot
+Claude (and Remote Control, if enabled) is running after a restart without
+anyone opening the panel; opening it attaches to the same session. From
+[@WheapLabs](https://github.com/WheapLabs).
+
+### ✨ Your own tmux settings survive restarts
+Put them in `~/.tmux.local.conf` (`/data/home/.tmux.local.conf`). The
+add-on's `~/.tmux.conf` is rewritten on every start and sources your file
+last, so your settings win. From [@owine](https://github.com/owine).
+
+### 🐛 Fixes
+- **Smaller backups that restore:** caches and the self-updating Claude
+  Code binary are left out of backups, and the uv cache and stale in-session
+  updates are pruned. uv's cache is full of hard links, which Home Assistant
+  can't restore: a backup that contained it failed with "Not a gzipped file"
+  or never finished. After a restore the add-on runs its bundled Claude Code and
+  reinstalls the current one in the background. From
+  [@owine](https://github.com/owine), [@nsleigh](https://github.com/nsleigh)
+  and [@daninden](https://github.com/daninden).
+- **The "Claude Code login" notification** only ever carries the actual login
+  link, also when the terminal wraps it, and isn't started at all with
+  `claude_code_oauth_token`. From [@ESJavadex](https://github.com/ESJavadex).
+- **`claude-doctor`** runs every check instead of stopping at the first
+  failure. From [@owine](https://github.com/owine).
+
+### 🔧 Under the hood
+- Alpine 3.21 → 3.24 (3.21 reaches end of life in November 2026), and
+  release builds now upgrade Alpine packages and rebuild without cache, so
+  each release picks up current security fixes and Claude Code. From
+  [@owine](https://github.com/owine).
+- A failed option read at boot no longer stops the add-on (3.24's bashio
+  reports Supervisor API errors where 3.21's returned empty).
+
+### Known issue
+In the Home Assistant **Mac app**, Option+drag doesn't reach the clipboard
+and Cmd+V doesn't paste into the terminal (also in earlier versions). Use
+the terminal in a regular browser for copy and paste.
+
 ## 2.6.2
 
 ### 📋 Copying: Shift+drag, and the terminal now says so
