@@ -86,14 +86,21 @@ function element() {
 // a clipboard, a document whose execCommand('copy') dispatches a copy event
 // to capture listeners (only when `gesture` is true, as browsers do), and
 // manual timers.
-function loadPage({ secure = true, clipboard = 'ok', gesture = true } = {}) {
+function loadPage({ secure = true, clipboard = 'ok', gesture = true, withTerm = true } = {}) {
     const handlers = [];
     const inputs = [];
     const keyHandlers = [];
+    const winListeners = [];
+    const inside = { inTerminal: true };
+    const textarea = { tag: 'textarea' };
+    let focusCalls = 0;
     const term = {
         parser: { registerOscHandler: (id, fn) => handlers.push({ id, fn, term }) },
         attachCustomKeyEventHandler: (fn) => keyHandlers.push(fn),
         input: (data, wasUserInput) => inputs.push({ data, wasUserInput }),
+        element: { contains: (node) => Boolean(node && node.inTerminal) },
+        textarea,
+        focus: () => { focusCalls++; doc.activeElement = textarea; doc.focused = true; },
     };
     const written = [];
     const copied = [];
@@ -102,6 +109,9 @@ function loadPage({ secure = true, clipboard = 'ok', gesture = true } = {}) {
     const intervals = [];
 
     const doc = {
+        focused: false,
+        activeElement: null,
+        hasFocus: () => doc.focused,
         body: { appendChild: (el) => toasts.push(el) },
         createElement: element,
         addEventListener: (type, fn) => { if (type === 'copy') listeners.add(fn); },
@@ -126,8 +136,9 @@ function loadPage({ secure = true, clipboard = 'ok', gesture = true } = {}) {
     };
 
     const win = {
-        term,
+        term: withTerm ? term : undefined,
         document: doc,
+        addEventListener: (type, fn, capture) => winListeners.push({ type, fn, capture }),
         isSecureContext: secure,
         navigator: { clipboard: navigatorClipboard },
         setInterval: (fn) => intervals.push(fn),
@@ -151,6 +162,24 @@ function loadPage({ secure = true, clipboard = 'ok', gesture = true } = {}) {
         toast: () => (toasts[0] ? toasts[0].textContent : null),
         tick: () => intervals.forEach((fn) => fn()),
         osc: (data) => handlers[handlers.length - 1].fn(data),
+        doc,
+        inside,
+        focusCalls: () => focusCalls,
+        listeners: (type) => winListeners.filter((l) => l.type === type).map((l) => l.capture === true),
+        // Dispatch a window event to the page's listeners. Returns what a
+        // listener did to it, so a test can tell whether xterm.js (further
+        // down the capture/bubble path) would still have seen it.
+        fire: (type, props = {}) => {
+            const event = Object.assign({
+                type, button: 0, target: inside,
+                shiftKey: false, ctrlKey: false, altKey: false, metaKey: false,
+                prevented: false, stopped: false,
+                preventDefault() { this.prevented = true; },
+                stopPropagation() { this.stopped = true; },
+            }, props);
+            winListeners.filter((l) => l.type === type).forEach((l) => l.fn(event));
+            return event;
+        },
     };
 }
 
@@ -254,4 +283,86 @@ test('plain Enter and other modifier combinations go through untouched', () => {
     assert.strictEqual(page.key(key('keydown', 'Enter', { shiftKey: true, metaKey: true })), true);
     assert.strictEqual(page.key(key('keydown', 'a', { shiftKey: true })), true);
     assert.deepStrictEqual(page.inputs, []);
+});
+
+// --- Focusing click (#159) ---
+
+test('listens for presses on window in the capture phase', () => {
+    // Captured ahead of xterm.js's own mousedown handler on the terminal
+    // element, or stopping the event would come too late.
+    const page = loadPage();
+    assert.deepStrictEqual(page.listeners('mousedown'), [true]);
+});
+
+test('the click that focuses the terminal only focuses it', () => {
+    const page = loadPage();
+    const event = page.fire('mousedown');
+    assert.strictEqual(event.prevented, true);
+    assert.strictEqual(event.stopped, true);
+    assert.strictEqual(page.focusCalls(), 1);
+});
+
+test('the next click on the focused terminal goes through', () => {
+    const page = loadPage();
+    page.fire('mousedown');
+    const event = page.fire('mousedown');
+    assert.strictEqual(event.stopped, false);
+    assert.strictEqual(event.prevented, false);
+    assert.strictEqual(page.focusCalls(), 1);
+});
+
+// Alt+Tab or a click in another app, then a click back into the terminal:
+// the textarea may still be the active element, and the browser may report
+// focus already, but the click is still the one that brought the page back.
+test('a click after the page lost focus is swallowed even if focus looks intact', () => {
+    const page = loadPage();
+    page.fire('mousedown');
+    page.fire('blur');
+    assert.strictEqual(page.doc.hasFocus(), true);
+    assert.strictEqual(page.fire('mousedown').stopped, true);
+    assert.strictEqual(page.fire('mousedown').stopped, false);
+});
+
+test('typing after coming back means the next click goes through', () => {
+    const page = loadPage();
+    page.fire('mousedown');
+    page.fire('blur');
+    page.fire('keydown');
+    assert.strictEqual(page.fire('mousedown').stopped, false);
+});
+
+test('a click while the terminal is not the focused element is swallowed', () => {
+    const page = loadPage();
+    page.fire('mousedown');
+    page.doc.activeElement = null;
+    assert.strictEqual(page.fire('mousedown').stopped, true);
+});
+
+test('Shift, Option, Ctrl and Cmd clicks always go through (forced selection)', () => {
+    for (const mod of ['shiftKey', 'altKey', 'ctrlKey', 'metaKey']) {
+        const page = loadPage();
+        const event = page.fire('mousedown', { [mod]: true });
+        assert.strictEqual(event.stopped, false, mod);
+        assert.strictEqual(event.prevented, false, mod);
+    }
+});
+
+test('right and middle clicks go through', () => {
+    for (const button of [1, 2]) {
+        const page = loadPage();
+        assert.strictEqual(page.fire('mousedown', { button }).stopped, false);
+    }
+});
+
+test('clicks outside the terminal are left alone', () => {
+    const page = loadPage();
+    assert.strictEqual(page.fire('mousedown', { target: { inTerminal: false } }).stopped, false);
+    assert.strictEqual(page.focusCalls(), 0);
+});
+
+test('does nothing before ttyd has created window.term', () => {
+    const page = loadPage({ withTerm: false });
+    const event = page.fire('mousedown');
+    assert.strictEqual(event.stopped, false);
+    assert.strictEqual(event.prevented, false);
 });
