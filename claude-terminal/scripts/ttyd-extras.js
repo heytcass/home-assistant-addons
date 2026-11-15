@@ -18,7 +18,16 @@
 // which Claude Code reads as "insert a newline" (and bash as a line
 // continuation).
 //
-// The decoder and key filter are pure and exported for the Node tests in
+// Focusing click (#159): the click that brings the terminal into focus is
+// not passed to the terminal. If the pointer moved during it, tmux (or
+// Claude Code, when it captures the mouse) saw a one-cell drag, copied it,
+// and the OSC 52 handler above put those one or two characters on the
+// clipboard, replacing whatever was copied in another app. That click now
+// only focuses the terminal, like a click on an unfocused window in most
+// desktop terminals. Clicks with a modifier (Shift/Option+drag selection)
+// and other buttons go through as before.
+//
+// The decoder and key filters are pure and exported for the Node tests in
 // tests/.
 (function (root) {
     'use strict';
@@ -66,7 +75,20 @@
 
     var SHIFT_ENTER_INPUT = '\\\r';
 
-    var api = { decodeOsc52: decodeOsc52, isShiftEnter: isShiftEnter, SHIFT_ENTER_INPUT: SHIFT_ENTER_INPUT };
+    // A plain left-button press: the only kind the focusing-click guard
+    // swallows. Modifiers force xterm.js's own selection, which is the
+    // user's deliberate choice, so those always go through.
+    function isPlainPrimaryPress(event) {
+        return event.button === 0 &&
+            !event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey;
+    }
+
+    var api = {
+        decodeOsc52: decodeOsc52,
+        isShiftEnter: isShiftEnter,
+        isPlainPrimaryPress: isPlainPrimaryPress,
+        SHIFT_ENTER_INPUT: SHIFT_ENTER_INPUT
+    };
     if (typeof module !== 'undefined' && module.exports) {
         module.exports = api;
         return;
@@ -163,6 +185,29 @@
     }
     attach();
     win.setInterval(attach, 1000);
+
+    // Focusing click (#159). A press counts as the focusing click when the
+    // page lost focus since the last key or press (window blur: another app,
+    // or the rest of Home Assistant), or the terminal isn't focused right
+    // now. Listening on window in the capture phase runs ahead of xterm.js's
+    // own mousedown handler, so stopping the event there keeps the press,
+    // the drag and the release away from the terminal entirely. xterm.js's
+    // handler would have prevented the default and focused the terminal, so
+    // this does the same.
+    var refocused = true;
+    win.addEventListener('blur', function () { refocused = true; });
+    win.addEventListener('keydown', function () { refocused = false; }, true);
+    win.addEventListener('mousedown', function (event) {
+        var focusing = refocused;
+        refocused = false;
+        var term = registered;
+        if (!term || !term.element || !term.element.contains(event.target)) return;
+        if (!isPlainPrimaryPress(event)) return;
+        if (!focusing && doc.hasFocus() && doc.activeElement === term.textarea) return;
+        event.preventDefault();
+        event.stopPropagation();
+        term.focus();
+    }, true);
 
     win.ClaudeTerminal = api;
 })(typeof self !== 'undefined' ? self : this);
