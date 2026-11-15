@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.7.1
+
+### 🐛 Pasting no longer drops in one or two stray characters
+Since 2.7.0, the click that brings the terminal into focus could replace
+your clipboard. If the mouse moved even slightly during that click, tmux
+(or Claude Code) saw a one-cell drag and copied it, and 2.7.0's new
+clipboard support put those one or two characters on your clipboard, in
+place of whatever you'd copied in another app. The next paste inserted
+exactly those.
+
+That click now only focuses the terminal and isn't passed on, so it can't
+select or copy anything. Click again to select, or to click in Claude
+Code. Shift+drag (Option+drag on macOS) works from the first click as
+before. Reported, with a precise diagnosis, by
+[@Patch76](https://github.com/Patch76) (#159).
+
 ## 2.7.0
 
 ### 🔒 Only Home Assistant can reach the terminal
