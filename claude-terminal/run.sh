@@ -266,7 +266,8 @@ update_claude() {
         # pipe, the claude binary the script launches inherits that pipe as
         # stdin and can block forever reading from it once curl exits (#126).
         # A file plus stdin from /dev/null gives every child a closed stdin.
-        installer=$(mktemp /tmp/claude-install.XXXXXX.sh)
+        # BusyBox mktemp needs the X run at the very end of the template.
+        installer=$(mktemp /tmp/claude-install.XXXXXX)
         if curl -fsSL --connect-timeout 10 https://claude.ai/install.sh -o "$installer" \
             && bash "$installer" </dev/null >/dev/null 2>&1 \
             && [ -x "$HOME/.local/bin/claude" ] && native_claude_runs; then
